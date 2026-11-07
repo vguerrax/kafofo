@@ -1,3 +1,5 @@
+import { readAuthConfig, readTrustedProxies } from './modules/platform/auth/config.js';
+
 const levels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 export type LogLevel = (typeof levels)[number];
 
@@ -12,11 +14,16 @@ export function readConfig(env: NodeJS.ProcessEnv) {
   }
   const databaseUrl = env['DATABASE_URL'];
   if (databaseUrl) validateDatabaseUrl(databaseUrl);
+  const auth = readAuthConfig(env);
+  if (auth && !databaseUrl)
+    throw new Error('DATABASE_URL é obrigatória quando a autenticação está configurada.');
   return {
     host: env['HOST'] ?? '127.0.0.1',
     port,
     logLevel: level as LogLevel,
     databaseUrl,
+    auth,
+    trustedProxies: readTrustedProxies(env['TRUSTED_PROXIES']),
   };
 }
 

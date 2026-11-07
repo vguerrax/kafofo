@@ -1,4 +1,5 @@
 import { Type, type Static } from 'typebox';
+export * from './auth.js';
 
 export const HealthResponseSchema = Type.Object(
   { status: Type.Literal('ok'), service: Type.Literal('kafofo') },

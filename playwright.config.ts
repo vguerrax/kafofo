@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testMatch: 'foundation.spec.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 1 : 0,
@@ -19,7 +20,14 @@ export default defineConfig({
       command: 'pnpm --filter @kafofo/api dev',
       url: 'http://127.0.0.1:4404/api/health',
       reuseExistingServer: false,
-      env: { HOST: '127.0.0.1', PORT: '4404', LOG_LEVEL: 'silent' },
+      env: {
+        HOST: '127.0.0.1',
+        PORT: '4404',
+        LOG_LEVEL: 'silent',
+        AUTH_SECRET: '',
+        AUTH_BASE_URL: '',
+        TRUSTED_PROXIES: '',
+      },
     },
     {
       command: 'pnpm --filter @kafofo/web dev --host 127.0.0.1 --port 5404 --strictPort',

@@ -63,6 +63,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_test
       POC_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_poc
+      AUTH_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_test
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -77,13 +78,14 @@ jobs:
         run: npm install --global "$(node -p 'require("./package.json").packageManager')"
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-      - name: Preparar banco exclusivo e segredo descartável da POC
+      - name: Preparar bancos exclusivos e segredos descartáveis
         run: |
           pnpm --filter @kafofo/api exec node --input-type=module <<'JS'
           import pg from 'pg';
           const pool = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL });
           try {
             await pool.query('CREATE DATABASE kafofo_auth_poc');
+            await pool.query('CREATE DATABASE kafofo_auth_test');
           } finally {
             await pool.end();
           }
@@ -91,16 +93,23 @@ jobs:
           poc_auth_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$poc_auth_secret"
           echo "POC_AUTH_SECRET=$poc_auth_secret" >> "$GITHUB_ENV"
+          product_auth_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$product_auth_secret"
+          echo "AUTH_SECRET=$product_auth_secret" >> "$GITHUB_ENV"
       - name: Migrações e conectividade da fundação
         run: pnpm test:db
       - name: Integração da autenticação em PostgreSQL
         run: pnpm --filter @kafofo/auth-poc test:integration
+      - name: Integração da autenticação do produto
+        run: pnpm --filter @kafofo/api test:auth
       - name: Instalar Chromium e bibliotecas de sistema
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E da fundação
         run: pnpm test:e2e
       - name: E2E da autenticação em HTTP
         run: pnpm --filter @kafofo/auth-poc test:e2e
+      - name: E2E da autenticação do produto em HTTP
+        run: pnpm test:auth:e2e
       - name: Preparar TLS local descartável
         run: |
           openssl req -x509 -newkey rsa:2048 -nodes \
@@ -112,3 +121,8 @@ jobs:
           POC_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           POC_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm --filter @kafofo/auth-poc test:e2e
+      - name: E2E da autenticação do produto em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:auth:e2e

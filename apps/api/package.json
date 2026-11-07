@@ -11,13 +11,17 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx src/database/migrate.ts",
     "test:db": "node --env-file-if-exists=.env --import tsx src/database/verify.ts",
-    "openapi:generate": "node --import tsx src/openapi.ts"
+    "openapi:generate": "node --import tsx src/openapi.ts",
+    "test:auth": "pnpm --filter @kafofo/contracts build && node --env-file-if-exists=.env ../../node_modules/vitest/vitest.mjs run --config vitest.auth.config.ts",
+    "auth:bootstrap": "node --env-file-if-exists=.env --import tsx src/modules/platform/auth/operator.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.18",
     "@fastify/swagger": "9.9.3",
     "@fastify/type-provider-typebox": "6.3.0",
     "@kafofo/contracts": "workspace:*",
     "ajv-formats": "^3.0.1",
+    "better-auth": "1.7.18",
     "drizzle-orm": "0.45.4",
     "fastify": "5.12.8",
     "pg": "8.23.1",

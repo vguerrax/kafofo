@@ -4,10 +4,10 @@ O workflow [CI](../../.github/workflows/ci.yml), implementado na issue #6 confor
 
 ## Checks para integração
 
-| Check                    | Verificações                                                                                                                                  |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Qualidade`              | Instalação com lockfile fixado; lint, formatação, TypeScript estrito, testes unitários, build e OpenAPI por `pnpm check`                      |
-| `Integração e navegador` | PostgreSQL 17 descartável; migrações/reexecução da fundação; integração da autenticação; Chromium na fundação e na POC, em HTTP e HTTPS local |
+| Check                    | Verificações                                                                                                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Qualidade`              | Instalação com lockfile fixado; lint, formatação, TypeScript estrito, testes unitários, build e OpenAPI por `pnpm check`                                                           |
+| `Integração e navegador` | PostgreSQL 17 descartável; migrações/reexecução; integração da autenticação do produto e da POC; Chromium na fundação, no produto e na POC, com autenticação em HTTP e HTTPS local |
 
 Ambos devem passar no commit proposto antes da integração, além da revisão. Qualquer comando que falhe interrompe seu job; não há `continue-on-error`. Timeout e cancelamento de uma execução antiga não equivalem a aprovação. O CI não publica versões nem encerra issues.
 
@@ -21,7 +21,7 @@ O GitHub pode exigir aprovação do mantenedor para iniciar workflows de contrib
 
 ## Isolamento e reprodução local
 
-Cada execução de integração recebe um PostgreSQL 17 novo, sem volume persistente. A fundação usa `kafofo_test`; a POC usa `kafofo_auth_poc`, com schema e migrações próprios. A credencial SQL do workflow serve somente ao serviço descartável. O segredo da POC é aleatório por execução e mascarado. Nenhuma credencial operacional deve ser usada nesses testes.
+Cada execução de integração recebe um PostgreSQL 17 novo, sem volume persistente. A fundação usa `kafofo_test`; a POC usa `kafofo_auth_poc`, com schema e migrações próprios. A autenticação do produto usa `kafofo_auth_test`, exclusivo e descartável, configurado em `AUTH_TEST_DATABASE_URL`. Suas suítes limpam as tabelas de autenticação para testar o primeiro acesso e não podem compartilhar dados reais ou executar simultaneamente contra esse banco. A credencial SQL do workflow serve somente ao serviço descartável. Segredos do produto e da POC são independentes, aleatórios por execução e mascarados. Nenhuma credencial operacional deve ser usada nesses testes.
 
 Com Node 24, pnpm fixado em `packageManager`, PostgreSQL 17 e Chromium disponíveis, execute na raiz:
 
@@ -30,11 +30,13 @@ pnpm install --frozen-lockfile
 pnpm check
 pnpm test:db
 pnpm --filter @kafofo/auth-poc test:integration
+pnpm --filter @kafofo/api test:auth
 pnpm exec playwright install --with-deps chromium
 pnpm test:e2e
 pnpm --filter @kafofo/auth-poc test:e2e
+pnpm test:auth:e2e
 ```
 
-Configure previamente `TEST_DATABASE_URL` e o banco exclusivo `POC_DATABASE_URL`, além de `POC_AUTH_SECRET`, conforme os guias de [desenvolvimento](README.md) e do [laboratório](../../pocs/auth/README.md). Esses comandos não criam os bancos locais. Aplique as instruções do laboratório para o percurso HTTPS com certificado temporário. Execute os testes do laboratório sequencialmente, sem compartilhar seu banco com uma sessão manual em uso.
+Configure previamente `TEST_DATABASE_URL`, `AUTH_TEST_DATABASE_URL`, `POC_DATABASE_URL` e `POC_AUTH_SECRET`, conforme os guias de [desenvolvimento](README.md) e do [laboratório](../../pocs/auth/README.md). Esses comandos não criam os bancos locais. O navegador do produto gera segredo descartável se ausente e inicia API/Vite nas portas exclusivas 4407/5407. Aplique as instruções de cada guia para repetir os percursos HTTPS com certificado temporário; o CI executa ambos. Execute testes de cada banco sequencialmente, sem compartilhar com uma sessão manual em uso. Traces, vídeos e screenshots da autenticação do produto estão desabilitados; não publicar segredos como artefatos.
 
 O check de qualidade inclui os testes unitários da POC; banco e navegador são comandos separados. HTTPS local verifica cookies/transporte no experimento, sem comprovar Caddy ou implantação real. Os limites da conclusão da POC e as regressões de atualização permanecem na [ADR-0008](../adr/0008-autenticacao-better-auth.md).

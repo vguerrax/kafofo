@@ -21,7 +21,8 @@
     "openapi:generate": "pnpm --filter @kafofo/contracts build && pnpm --filter @kafofo/api openapi:generate",
     "openapi:check": "pnpm openapi:generate && redocly lint artifacts/openapi.json",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm openapi:check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:auth:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.auth.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
