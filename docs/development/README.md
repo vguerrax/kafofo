@@ -100,7 +100,7 @@ pnpm --filter @kafofo/api test:auth
 pnpm test:auth:e2e
 ```
 
-API/Vite exclusivos usam portas 4407/5407, sem reutilizar servidores; a API é iniciada sem modo watch ou leitura do `.env` de desenvolvimento. O teste global prepara o banco antes dos cenários de navegador. Chromium percorre configuração, login obrigatório, troca, revogação de outro navegador, quinta falha, novo login com bloqueio remanescente e logout, em viewport móvel e com navegação por Tab. Traces, screenshots, vídeos e snapshots automáticos de DOM desses percursos ficam desabilitados para não capturar segredos. Execute navegador separadamente de instalações, builds e alterações de arquivos que possam provocar recarga do Vite.
+API/Vite exclusivos usam portas 4407/5407, sem reutilizar servidores; a API é iniciada sem modo watch ou leitura do `.env` de desenvolvimento. O teste global prepara o banco antes dos cenários de navegador. Chromium percorre configuração, login obrigatório, troca, revogação de outro navegador, quinta falha, novo login com bloqueio remanescente e logout, em viewport móvel e com navegação por Tab. Falhas de rede e respostas 503 permitem tentar novamente por teclado. Traces, screenshots, vídeos e snapshots automáticos de DOM desses percursos ficam desabilitados para não capturar segredos. Execute navegador separadamente de instalações, builds e alterações de arquivos que possam provocar recarga do Vite.
 
 Para verificar cookie `Secure` no navegador em HTTPS local:
 

@@ -42,7 +42,10 @@ export function App() {
             {connection === 'ok' && 'Servidor disponível.'}
             {connection === 'error' && 'Não foi possível conectar. Tente novamente.'}
           </p>
-          {connection === 'error' && (
+          {connection === 'ok' && !setup && (
+            <p role="alert">O acesso está temporariamente indisponível. Tente novamente.</p>
+          )}
+          {(connection === 'error' || (connection === 'ok' && !setup)) && (
             <button
               onClick={() => {
                 setConnection('loading');

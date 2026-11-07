@@ -101,4 +101,21 @@ test('falha de acesso permite tentar novamente por teclado', async ({ page }) =>
   await expect(
     page.getByRole('heading', { name: /^(Entrar|Configurar seu Kafofo)$/ }),
   ).toBeVisible();
+  await page.route('**/api/auth/setup', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: { code: 'AUTH_UNAVAILABLE', message: 'Autenticação indisponível.' },
+      }),
+    }),
+  );
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('acesso está temporariamente indisponível');
+  await page.unroute('**/api/auth/setup');
+  await page.getByRole('button', { name: 'Tentar novamente' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('heading', { name: /^(Entrar|Configurar seu Kafofo)$/ }),
+  ).toBeVisible();
 });
