@@ -1,3 +1,4 @@
+import { createRecoveryService } from './modules/platform/recovery/service.js';
 import { createInvitationService } from './modules/platform/invitations/service.js';
 import { createContextService } from './modules/platform/contexts/service.js';
 import { buildApp } from './app.js';
@@ -20,6 +21,7 @@ const app = await buildApp({
   trustedProxies: config.trustedProxies,
   ...(database && config.auth
     ? {
+        recovery: createRecoveryService({ pool: database.pool, ...config.auth }),
         contexts: createContextService({ pool: database.pool, ...config.auth }),
         invitations: createInvitationService({ pool: database.pool, ...config.auth }),
       }

@@ -2,3 +2,4 @@
 export * from '../modules/platform/auth/schema.js';
 export * from '../modules/platform/contexts/schema.js';
 export * from '../modules/platform/invitations/schema.js';
+export * from '../modules/platform/recovery/schema.js';

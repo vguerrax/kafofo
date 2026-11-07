@@ -45,6 +45,10 @@ Não montar indiscriminadamente o handler nativo: caminhos alternativos poderiam
 - Na implementação, definir limpeza dos contadores/verificações expirados e avaliar contenção, limites de espera e ocupação de conexões pelos locks.
 - Validar autorização contextual nas tarefas correspondentes e a cadeia confiável de proxy, origem e cookies no ambiente Caddy/TLS real antes da entrega aos usuários.
 
+## Adaptação de recuperação no produto
+
+Na [#10](https://github.com/vguerrax/kafofo/issues/10), o serviço de recuperação persiste somente digest e controla validade/consumo na própria tabela. A camada de adaptação usa o contexto do Better Auth (`password.hash` e `internalAdapter.updatePassword`) para atualizar a credencial na conexão externa. Sessões são revogadas explicitamente na mesma transação. Nenhum token de verificação nativo adicional ou handler de reset é criado. Esses pontos internos da versão fixada exigem regressão em upgrades: senha anterior recusada, novo login, revogação integral, consumo concorrente e rollback completo.
+
 ## Origem e limites do registro
 
 Consolidação das definições do projeto recuperadas para este conjunto. A data acima é a data de documentação, não necessariamente a de aprovação. Justificativas, alternativas e orientações derivadas explicitam a análise desta consolidação e não afirmam que todas foram discutidas ou aprovadas anteriormente. Consulte o [índice](README.md) para os critérios de status.

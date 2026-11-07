@@ -1,3 +1,5 @@
+import { RecoveryPanel, RecoveryAdminPanel } from './RecoveryPanel';
+import { recoveryEntry, captureRecovery } from './recovery-api';
 import { InvitationPanel } from './InvitationPanel';
 import { invitationEntry, captureInvitation } from './invitation-api';
 import { ContextsPanel } from './ContextsPanel';
@@ -6,10 +8,17 @@ import type { SessionResponse } from '@kafofo/contracts';
 import { ApiError, changePassword, getSession, login, logout, setupAccount } from './api';
 
 export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolean }) {
+  const [recovering, setRecovering] = useState(recoveryEntry.opened);
+  const [recoveryVersion, setRecoveryVersion] = useState(0);
   const [inviting, setInviting] = useState(invitationEntry.opened);
   const [invitationVersion, setInvitationVersion] = useState(0);
   useEffect(() => {
     const open = () => {
+      if (captureRecovery()) {
+        setRecovering(true);
+        setInviting(false);
+        setRecoveryVersion((v) => v + 1);
+      }
       if (captureInvitation()) {
         setInviting(true);
         setInvitationVersion((v) => v + 1);
@@ -135,6 +144,17 @@ export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolea
       setBusy(false);
     }
   }
+  if (recovering)
+    return (
+      <RecoveryPanel
+        key={recoveryVersion}
+        onCompleted={() => {
+          setRecovering(false);
+          setSession(null);
+          setMessage('Senha redefinida. Entre com a nova senha.');
+        }}
+      />
+    );
   if (loading) return <p role="status">Verificando acesso…</p>;
   return (
     <section className="auth-panel" aria-label="Acesso ao Kafofo">
@@ -180,6 +200,7 @@ export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolea
       {session && !inviting && (
         <ContextsPanel userId={session.user.id} onUnauthenticated={() => setSession(null)} />
       )}
+      {session?.user.globalAdmin && !inviting && <RecoveryAdminPanel key={session.user.id} />}
       {message && (
         <p role="status" className="notice">
           {message}

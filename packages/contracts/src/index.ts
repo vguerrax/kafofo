@@ -29,3 +29,4 @@ export type HealthResponse = Static<typeof HealthResponseSchema>;
 export type ErrorResponse = Static<typeof ErrorResponseSchema>;
 export * from './contexts.js';
 export * from './invitations.js';
+export * from './recovery.js';

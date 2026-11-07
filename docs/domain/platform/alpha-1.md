@@ -78,6 +78,12 @@ Better Auth/adaptador 1.7.18 com Username e adaptações locais foram aceitos ap
 - Conclusão encerra todas as sessões anteriores e exige novo login; emissão e uso são auditados sem segredos.
 - Recuperação do administrador global por comando local executado pelo operador do servidor, com a mesma política de senha e invalidação de sessões.
 
+A [#10](https://github.com/vguerrax/kafofo/issues/10) expõe `POST /api/auth/recovery/issue`, `/preview` e `/complete`. A emissão administrativa recebe username de outra conta e revalida sessão e administração global; administração de núcleo não autoriza essa operação. O comando local emite somente para administrador global. Os dois canais compartilham a cota de três emissões por conta em uma hora.
+
+A consulta pública verifica validade sem consumir, incrementar falhas ou renovar prazo. Consulta e conclusão usam limites independentes de 30 requisições/origem/minuto, incluindo tokens inválidos. O envio revalida sob lock da conta; a quinta senha inválida revoga o link. Bloqueio por origem não conta como falha do link. Token indisponível tem resposta genérica. Token permanece somente em memória após remoção do fragmento; recarga exige reabrir o original.
+
+Senha, consumo, revogação de todas as sessões e evento de uso confirmam juntos. Emissão e evento também são atômicos; falhas preservam link anterior e cota. Eventos mínimos persistem ação, ator (conta ou UID do operador local), alvo, canal e data, sem segredos. A #15 permanece responsável pela consulta e gestão da auditoria, inclusive retenção. O adaptador Better Auth calcula o hash e atualiza credenciais na conexão externa; nenhuma rota nativa de reset é montada.
+
 ## Retenção por categoria
 
 | Categoria | Política da Alpha 1 |

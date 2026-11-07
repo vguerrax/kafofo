@@ -1,3 +1,5 @@
+import { recoveryRoutes } from './modules/platform/recovery/routes.js';
+import type { RecoveryService } from './modules/platform/recovery/service.js';
 import { invitationRoutes } from './modules/platform/invitations/routes.js';
 import type { InvitationService } from './modules/platform/invitations/service.js';
 import { randomUUID } from 'node:crypto';
@@ -14,6 +16,7 @@ import type { AuthService } from './modules/platform/auth/service.js';
 import { AuthError } from './modules/platform/auth/policies.js';
 
 interface AppOptions {
+  recovery?: RecoveryService;
   invitations?: InvitationService;
   logger?: FastifyBaseLogger;
   database?: Pick<Database, 'ping' | 'close'>;
@@ -96,6 +99,9 @@ export async function buildApp(options: AppOptions = {}) {
   });
   await app.register(invitationRoutes(options.invitations, options.authOrigin), {
     prefix: '/api/platform',
+  });
+  await app.register(recoveryRoutes(options.recovery, options.authOrigin), {
+    prefix: '/api/auth/recovery',
   });
   app.addHook('onClose', async () => {
     await options.auth?.close();

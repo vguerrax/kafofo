@@ -63,3 +63,15 @@ export async function createIdentity(
   });
   return { id: result.user.id, username };
 }
+
+// Mantém hash e atualização de credenciais sob Better Auth na conexão externa.
+// Nenhum handler HTTP nativo ou token de verificação alternativo é criado.
+export async function resetIdentityPassword(
+  client: pg.PoolClient,
+  options: AuthConfig,
+  userId: string,
+  password: string,
+) {
+  const context = await authAdapter(client, options).$context;
+  await context.internalAdapter.updatePassword(userId, await context.password.hash(password));
+}
