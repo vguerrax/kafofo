@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Esta fundação implementa a estrutura da issue #4: API mínima, frontend inicial, contratos e ferramentas. Não implementa autenticação, núcleos ou listas. Better Auth/adaptador 1.7.18 foram aceitos para a Alpha 1 após a POC #5, com as adaptações e limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md). A integração à aplicação permanece nas tarefas correspondentes.
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. Núcleos, residências, convites, recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -58,7 +58,61 @@ Readiness de conexão não comprova migrações aplicadas, permissões, autentic
 
 Frontend importa somente contratos públicos; não importa código interno da API. `exports` limita a superfície do pacote compartilhado e o lint rejeita imports conhecidos de internals. Essa regra é uma proteção inicial, não prova de isolamento entre módulos futuros; revisar dependências a cada módulo introduzido. Não criar um pacote compartilhado genérico com todas as regras de negócio.
 
-O namespace SQL `platform` é organização de módulo, não isolamento de tenants. As tabelas de identidade e domínio serão criadas pelas respectivas tarefas após a POC e o refinamento técnico. Não há tabela fictícia de usuários ou núcleo nesta fundação.
+O namespace SQL `platform` é organização de módulo, não isolamento de tenants. A migração `0001` cria identidade, credenciais, sessões, verificações, singleton de configuração e limites de autenticação. Tabelas de domínio e autorização contextual pertencem às próximas tarefas. O produto não importa o laboratório de autenticação.
+
+## Autenticação local
+
+Para habilitar o acesso, configure em `apps/api/.env` `DATABASE_URL`, `AUTH_SECRET` com pelo menos 32 caracteres aleatórios e `AUTH_BASE_URL=http://127.0.0.1:5304`. Gere o segredo, por exemplo, com `openssl rand -hex 32`. Não o versione ou use prefixo `VITE_`. Em outro host, use origem HTTPS exata, sem path, query ou credenciais. Configuração parcial é recusada; sem autenticação configurada, health/OpenAPI permanecem disponíveis e `/api/auth/*` responde 503.
+
+Depois de aplicar as migrações explicitamente, emita o código no terminal do operador:
+
+```bash
+pnpm --filter @kafofo/api auth:bootstrap
+```
+
+Esse comando imprime somente o código, com validade de 30 minutos e uso único. Reemissão invalida o anterior. Não encaminhe sua saída para logs. Abra a interface, preencha código, usuário e senha; após configurar, entre pelo login. O administrador ainda não possui núcleo/residência; criação desses contextos pertence à #8. Depois de configurar, o comando recusa nova emissão. Não apagar o singleton para reabrir cadastro; recuperação pertence à #10.
+
+| Endpoint                  | Comportamento                                                  |
+| ------------------------- | -------------------------------------------------------------- |
+| `GET /api/auth/setup`     | Apenas informa se a instalação foi configurada                 |
+| `POST /api/auth/setup`    | Consome código e cria administrador sem iniciar sessão         |
+| `POST /api/auth/login`    | Usuário/senha, cookie e perfil público mínimo                  |
+| `GET /api/auth/session`   | Própria conta e vencimento; 401 sem sessão vigente             |
+| `POST /api/auth/logout`   | Revoga sessão atual e limpa cookie; idempotente                |
+| `POST /api/auth/password` | Senha atual/nova; preserva prazo atual e revoga outras sessões |
+
+Corpos e respostas constam em `/api/openapi.json`. Mutações exigem `Origin` exatamente igual a `AUTH_BASE_URL` e não permitem `Sec-Fetch-Site: cross-site`. Cookies são host-only, `HttpOnly`, `SameSite=Lax` e `Secure` em HTTPS. A sessão expira sete dias após login, sem renovação por atividade ou cache que prolongue acesso revogado. Não há handler nativo genérico, cadastro livre ou recuperação HTTP nesta entrega.
+
+Cinco falhas de login/conta em 15 minutos suspendem o login por 15 minutos, sem revogar sessões válidas. Limite adicional: 60 tentativas/origem/minuto. Na troca, o contador independente de senha atual bloqueia a troca por 15 minutos e revoga todas as sessões na quinta falha; novo login não limpa esse bloqueio. Bootstrap HTTP aceita até dez submissões/origem/minuto. Erros 429 informam `Retry-After`.
+
+`TRUSTED_PROXIES` recebe IPs/CIDRs separados por vírgula; por padrão nenhum cabeçalho de proxy define a origem. Nunca usar confiança universal. A cadeia explicitamente confiável é verificada na API; sua configuração real com Caddy e restrição de acesso direto ao backend pertencem à #16. HTTPS local de teste não comprova implantação.
+
+Operações compostas usam uma transação e conexão únicas, lock por conta ou singleton e resposta/cookies somente após commit. Pool de cinco conexões, aquisição de dois segundos, lock de um segundo e statement timeout de dois segundos limitam espera; ocupação excessiva retorna 503 sem fila própria ilimitada nem repetição automática da mutação. Esses parâmetros não representam teste de carga.
+
+Limpeza ao iniciar e a cada minuto, sem sobreposição e em lotes de até 500 registros por tabela, remove contadores inativos e sessões/verificações expiradas. Não remove bloqueios futuros, sessões válidas ou o marcador de configuração concluída. Digest inicial expirado é descartado sem reabrir instalação. O timer é encerrado com a API. Eventos e retenção de auditoria de segurança continuam na #15.
+
+### Testes da autenticação
+
+Configure `AUTH_TEST_DATABASE_URL` no ambiente com banco **descartável e exclusivo**, cujo nome termine em `_auth_test`, diferente das URLs de uso normal, teste da fundação e POC. Integração e navegador limpam as tabelas de autenticação desse banco para comprovar a configuração inicial; não use dados reais nem execute as duas suítes simultaneamente contra o mesmo banco. O guard também recusa o mesmo nome de banco informado nas outras URLs. `pnpm check` inclui políticas/unitários; PostgreSQL e navegador são explícitos:
+
+```bash
+pnpm --filter @kafofo/api test:auth
+pnpm test:auth:e2e
+```
+
+API/Vite exclusivos usam portas 4407/5407, sem reutilizar servidores; a API é iniciada sem modo watch ou leitura do `.env` de desenvolvimento. O teste global prepara o banco antes da API iniciar. Chromium percorre configuração, login obrigatório, troca, revogação de outro navegador, quinta falha, novo login com bloqueio remanescente e logout, em viewport móvel e com navegação por Tab. Traces, screenshots, vídeos e snapshots automáticos de DOM desses percursos ficam desabilitados para não capturar segredos. Execute navegador separadamente de instalações, builds e alterações de arquivos que possam provocar recarga do Vite.
+
+Para verificar cookie `Secure` no navegador em HTTPS local:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout /tmp/kafofo-auth-key.pem -out /tmp/kafofo-auth-cert.pem \
+  -days 1 -subj /CN=127.0.0.1 -addext subjectAltName=IP:127.0.0.1
+AUTH_TLS_CERT=/tmp/kafofo-auth-cert.pem \
+AUTH_TLS_KEY=/tmp/kafofo-auth-key.pem pnpm test:auth:e2e
+```
+
+O certificado temporário é aceito só pela configuração de teste. A POC mantém seus próprios comandos, migrações e banco; nenhuma conta do laboratório é migrada para o produto. Evidências de execução ficam na issue/PR, sem status paralelo neste guia.
 
 ## Migrações
 

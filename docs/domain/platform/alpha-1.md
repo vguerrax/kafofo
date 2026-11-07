@@ -18,6 +18,8 @@ Interface responsiva e uso por teclado incluídos. Notificações internas, e-ma
 4. Cadastro livre fica fechado após configuração. Conta nova depende de convite; conta convidada não cria outro núcleo automaticamente.
 5. Participação no núcleo não concede acesso automático à residência. Papéis contextuais e acessos são atribuídos explicitamente. Cargo administrativo não concede acesso privado às listas de outras pessoas.
 
+O fluxo da [#7](https://github.com/vguerrax/kafofo/issues/7) cria somente a primeira conta, com papel de administrador global. Não inicia sessão automaticamente: após configurar, a pessoa entra pelo login e acessa o estado inicial sem núcleo ou residência. A criação desses contextos e concessões do passo 3 pertence à [#8](https://github.com/vguerrax/kafofo/issues/8); contas posteriores dependem dos convites da [#9](https://github.com/vguerrax/kafofo/issues/9). Não existe cadastro HTTP público alternativo nem emissão HTTP do código inicial.
+
 Conta é global e independente dos núcleos. Autorização considera sessão, vínculo ativo, papel atual e concessão do recurso, inclusive histórico, resumos, exportação e lixeira.
 
 ## Convites
@@ -37,7 +39,9 @@ Administrador do núcleo gera link revogável, válido por sete dias e para uma 
 
 Aplicar os dois limites de login. Suspensão de tentativas não encerra sessões válidas. A limitação por conta pode causar indisponibilidade temporária provocada por terceiros; esse contraponto foi aceito. Definir origem real com configuração de proxy confiável na implementação, sem aceitar cabeçalho arbitrário como identidade da origem.
 
-A escolha Better Auth continua condicionada à [POC](../../adr/0008-autenticacao-better-auth.md). Unicidade/normalização do username e compatibilidade técnica devem ser comprovadas nessa POC; não inferir aprovação de biblioteca ou de login federado.
+Na troca autenticada, falhas da senha atual têm contador próprio por conta, separado do login e compartilhado entre sessões. Cinco falhas em 15 minutos bloqueiam a troca por 15 minutos e revogam todas as sessões, inclusive a causadora, na mesma transação. Novo login não remove esse bloqueio. Senha atual correta limpa falhas anteriores quando não há bloqueio vigente; senha nova inválida não conta como falha de senha atual. Verificar a senha atual antes de validar a nova. Troca bem-sucedida preserva o prazo absoluto da sessão atual, inclusive ao rotacionar o cookie. Essas decisões e os contratos físicos são refinados na [#7](https://github.com/vguerrax/kafofo/issues/7).
+
+Better Auth/adaptador 1.7.18 com Username e adaptações locais foram aceitos após a [POC](../../adr/0008-autenticacao-better-auth.md). Username global usa 3–30 caracteres ASCII: letras, números, ponto, hífen e sublinhado; canonizar letras para minúsculas, sem trim, com unicidade no banco. Nome de exibição é independente. A contagem da senha acompanha unidades UTF-16 da biblioteca; não contar grafemas separadamente. Essa aceitação não inclui login federado.
 
 ## Recuperação
 
@@ -99,4 +103,4 @@ Os cenários são critérios futuros, não testes aprovados.
 
 ## Rastreabilidade e limites
 
-Refina plataforma/Q-P01–03, Q-P06, Q-P08–09 e Q-P12–18 no alcance desta entrega. Q-P04/05 continuam mais amplos que as operações usadas pelo Kitanda; Q-P07 depende da POC; contextos pessoais, desativação de módulos, outros módulos e serviços adiados conservam suas pendências. As decisões específicas de listas estão no [contrato do Kitanda](../kitanda/alpha-1.md). Contratos físicos de API/schema e escolhas de biblioteca permanecem nas respectivas tarefas técnicas.
+Refina plataforma/Q-P01–03, Q-P06, Q-P08–09 e Q-P12–18 no alcance desta entrega. Q-P04/05 continuam mais amplos que as operações usadas pelo Kitanda; Q-P07 foi avaliada pela POC #5, com alcance da ADR-0008; contextos pessoais, desativação de módulos, outros módulos e serviços adiados conservam suas pendências. As decisões específicas de listas estão no [contrato do Kitanda](../kitanda/alpha-1.md). Contratos físicos de API/schema e escolhas de biblioteca permanecem nas respectivas tarefas técnicas.

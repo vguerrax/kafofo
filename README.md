@@ -28,4 +28,4 @@ A documentação descreve o MVP pretendido. Critérios de aceitação não são 
 - [Como contribuir](CONTRIBUTING.md).
 - [Regras para agentes](AGENTS.md).
 
-A fundação contém API Fastify, frontend React e contratos TypeBox compartilhados. Autenticação e funcionalidades domésticas ainda serão implementadas nas tarefas correspondentes. O [GitHub Project](https://github.com/users/vguerrax/projects/1) mantém as etapas de execução.
+A aplicação contém API Fastify, frontend React, contratos TypeBox e configuração inicial, login, logout e troca autenticada de senha da [#7](https://github.com/vguerrax/kafofo/issues/7). Núcleos, residências, convites e recuperação de senha permanecem nas tarefas correspondentes. O [GitHub Project](https://github.com/users/vguerrax/projects/1) mantém as etapas de execução; disponibilidade do código não comprova publicação da Alpha 1.

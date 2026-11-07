@@ -7,6 +7,8 @@ Os fluxos consolidam comportamentos aprovados. Passos técnicos e tratamentos se
 
 ## FL-P01 — Primeiro cadastro e novo núcleo
 
+Na Alpha 1, a [#7](https://github.com/vguerrax/kafofo/issues/7) separa a criação única do administrador e o login da criação de núcleo/residência na #8, conforme o [contrato do incremento](alpha-1.md#primeiro-acesso-e-vínculos). O fluxo geral do MVP abaixo não autoriza cadastro livre na instalação.
+
 **Ator:** pessoa criando conta. **Referências:** RF-060–067, RN-032–035, ADR-0008.
 
 1. A pessoa cadastra sua identidade; e-mail pessoal não é obrigatório para autenticação.
@@ -76,6 +78,8 @@ A conta individual não é automaticamente excluída pela saída de um núcleo.
 **Pendências:** prazo e entrega do token, verificação da identidade do solicitante, recuperação combinada com 2FA e comprovação dos fluxos pela POC. Identificador sintético da biblioteca não é endereço para recuperação.
 
 ## FL-P07 — Administrar 2FA e sessões
+
+A [#7](https://github.com/vguerrax/kafofo/issues/7) entrega login, sessão absoluta, logout e troca de senha com revogação. Gestão completa das sessões e 2FA não são demonstradas por essas operações. A quinta falha de senha atual revoga todas as sessões e mantém o bloqueio da troca após novo login, conforme o [contrato da Alpha 1](alpha-1.md#senhas-e-sessões).
 
 **Ator:** titular. **Referências:** RF-104–111, RN-046.
 
