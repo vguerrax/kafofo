@@ -1,3 +1,4 @@
+import { createContextService } from './modules/platform/contexts/service.js';
 import { buildApp } from './app.js';
 import { readConfig } from './config.js';
 import { createDatabase } from './database/client.js';
@@ -16,6 +17,9 @@ const app = await buildApp({
   ...(database ? { database } : {}),
   ...(auth ? { auth, authOrigin: config.auth!.baseURL } : {}),
   trustedProxies: config.trustedProxies,
+  ...(database && config.auth
+    ? { contexts: createContextService({ pool: database.pool, ...config.auth }) }
+    : {}),
 });
 auth?.startCleanup(() => logger.error('Falha na limpeza de registros expirados de autenticação.'));
 
