@@ -17,7 +17,8 @@
     "test:contexts": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.contexts.config.ts",
     "test:invitations": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.invitations.config.ts",
     "test:recovery": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.recovery.config.ts",
-    "auth:recover": "node --env-file-if-exists=.env --import tsx src/modules/platform/recovery/operator.ts"
+    "auth:recover": "node --env-file-if-exists=.env --import tsx src/modules/platform/recovery/operator.ts",
+    "test:kitanda": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.kitanda.config.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.18",

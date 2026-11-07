@@ -36,6 +36,13 @@
       "when": 1794086270779,
       "tag": "0004_platform-recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794091525521,
+      "tag": "0005_kitanda-lists",
+      "breakpoints": true
     }
   ]
 }
