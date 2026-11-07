@@ -64,6 +64,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_test
       POC_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_poc
       AUTH_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_test
+      CONTEXT_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_context_test
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -86,6 +87,7 @@ jobs:
           try {
             await pool.query('CREATE DATABASE kafofo_auth_poc');
             await pool.query('CREATE DATABASE kafofo_auth_test');
+            await pool.query('CREATE DATABASE kafofo_context_test');
           } finally {
             await pool.end();
           }
@@ -102,6 +104,8 @@ jobs:
         run: pnpm --filter @kafofo/auth-poc test:integration
       - name: Integração da autenticação do produto
         run: pnpm --filter @kafofo/api test:auth
+      - name: Integração de núcleos e residências
+        run: pnpm --filter @kafofo/api test:contexts
       - name: Instalar Chromium e bibliotecas de sistema
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E da fundação
@@ -126,3 +130,11 @@ jobs:
           AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:auth:e2e
+
+      - name: E2E de núcleos e residências em HTTP
+        run: pnpm test:contexts:e2e
+      - name: E2E de núcleos e residências em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:contexts:e2e

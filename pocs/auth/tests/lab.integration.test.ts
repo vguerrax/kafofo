@@ -213,7 +213,14 @@ describe('Better Auth, Drizzle e PostgreSQL reais', () => {
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     for (const credentials of sessions) expect((await me(credentials)).statusCode).toBe(401);
     await expect(lab.reset(second.token, 'new-password')).rejects.toThrow();
-    expect((await login(user.username, 'new-password')).statusCode).toBe(200);
+    expect(
+      (
+        await login(
+          user.username,
+          results[0]!.status === 'fulfilled' ? 'new-password' : 'other-password',
+        )
+      ).statusCode,
+    ).toBe(200);
   });
   it('rollback mantém senha, token e sessões se revogação falhar', async () => {
     const user = await identity('global-admin');
