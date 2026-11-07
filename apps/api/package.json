@@ -12,7 +12,7 @@
     "db:migrate": "node --env-file-if-exists=.env --import tsx src/database/migrate.ts",
     "test:db": "node --env-file-if-exists=.env --import tsx src/database/verify.ts",
     "openapi:generate": "node --import tsx src/openapi.ts",
-    "test:auth": "node --env-file-if-exists=.env ../../node_modules/vitest/vitest.mjs run --config vitest.auth.config.ts",
+    "test:auth": "pnpm --filter @kafofo/contracts build && node --env-file-if-exists=.env ../../node_modules/vitest/vitest.mjs run --config vitest.auth.config.ts",
     "auth:bootstrap": "node --env-file-if-exists=.env --import tsx src/modules/platform/auth/operator.ts"
   },
   "dependencies": {

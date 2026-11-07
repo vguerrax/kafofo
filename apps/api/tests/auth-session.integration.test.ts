@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixture, password, origin, cookie, username, baseURL } from './auth-fixture.js';
 import { createAuthService } from '../src/modules/platform/auth/service.js';
 import { buildApp } from '../src/app.js';
@@ -116,20 +116,28 @@ describe('sessões e proteção de tentativas', () => {
   });
   it('sete dias absolutos, sem renovação e com expiração no instante exato', async () => {
     const user = await f.identity();
-    const credentials = cookie(await login(user.username));
-    const initial = (
-      await f.database.pool.query('select "createdAt","expiresAt" from platform.session')
-    ).rows[0];
-    expect(initial.expiresAt.getTime() - initial.createdAt.getTime()).toBe(7 * 86400000);
-    f.advance(2 * 86400000);
-    expect((await me(credentials)).statusCode).toBe(200);
-    expect(
-      (await f.database.pool.query('select "expiresAt" from platform.session')).rows[0].expiresAt,
-    ).toEqual(initial.expiresAt);
-    f.setTime(initial.expiresAt.getTime() - 1);
-    expect((await me(credentials)).statusCode).toBe(200);
-    f.advance(1);
-    expect((await me(credentials)).statusCode).toBe(401);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const credentials = cookie(await login(user.username));
+      const initial = (
+        await f.database.pool.query('select "createdAt","expiresAt" from platform.session')
+      ).rows[0];
+      expect(initial.expiresAt.getTime() - initial.createdAt.getTime()).toBe(7 * 86400000);
+      f.advance(2 * 86400000);
+      vi.setSystemTime(f.options.now());
+      expect((await me(credentials)).statusCode).toBe(200);
+      expect(
+        (await f.database.pool.query('select "expiresAt" from platform.session')).rows[0].expiresAt,
+      ).toEqual(initial.expiresAt);
+      f.setTime(initial.expiresAt.getTime() - 1);
+      vi.setSystemTime(f.options.now());
+      expect((await me(credentials)).statusCode).toBe(200);
+      f.advance(1);
+      vi.setSystemTime(f.options.now());
+      expect((await me(credentials)).statusCode).toBe(401);
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('troca conserva prazo absoluto, exige senha atual e revoga outros navegadores', async () => {
     const user = await f.identity();
