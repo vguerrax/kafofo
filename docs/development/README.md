@@ -17,7 +17,7 @@ Instale dependências na raiz:
 pnpm install --frozen-lockfile
 ```
 
-TypeScript 6.0 é usado por compatibilidade com a versão fixada do typescript-eslint; versões resolvidas constam no lockfile. Não atualizar ferramentas implicitamente. Hooks Husky executam lint-staged em arquivos preparados para commit. Hooks não substituem CI, que será configurado na #6.
+TypeScript 6.0 é usado por compatibilidade com a versão fixada do typescript-eslint; versões resolvidas constam no lockfile. Não atualizar ferramentas implicitamente. Hooks Husky executam lint-staged em arquivos preparados para commit. Hooks não substituem as verificações do [CI](ci.md).
 
 ## PostgreSQL e variáveis
 
@@ -81,6 +81,8 @@ pnpm --filter @kafofo/api exec drizzle-kit generate --custom --name=nome-da-migr
 Edite somente a migração nova antes de aplicá-la. Não reescreva SQL já distribuído; crie migração sucessora. Drizzle registra migrações executadas para evitar reaplicação. Faça backup e planeje recuperação antes de qualquer migração destrutiva; a ferramenta não torna alterações reversíveis automaticamente.
 
 ## Verificações
+
+O [guia de CI](ci.md) descreve os checks de pull requests, o isolamento dos testes e os comandos locais equivalentes.
 
 ```bash
 pnpm check

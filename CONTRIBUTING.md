@@ -18,7 +18,7 @@ Atualize os documentos de domínio quando alterar comportamento. Preserve IDs e 
 
 ## Validação
 
-Documentação: verifique links relativos, referências e coerência. Código: execute verificações relevantes de tipos, lint, build, contratos e testes assim que forem disponibilizadas pela fundação técnica e pelo CI. Não há comandos de aplicação estabelecidos nesta importação.
+Documentação: verifique links relativos, referências e coerência. Código: execute `pnpm check`, os testes de banco e os percursos de navegador descritos no [guia de CI](docs/development/ci.md). Os checks `Qualidade` e `Integração e navegador` devem passar antes da integração, além da revisão. O guia distingue essa regra de trabalho da proteção de branch configurada no GitHub.
 
 ## Licença
 
