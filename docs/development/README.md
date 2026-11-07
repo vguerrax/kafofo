@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. Convites, recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -195,3 +195,18 @@ pnpm test:contexts:e2e
 Navegador usa portas 4408/5408, API sem watch e fixtures internas, sem abrir cadastro público. Cobre criação e retomada, celular, teclado, nomeação/gestão por papéis, revogação em outra sessão e recuperação de 503. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` também habilitam HTTPS local nessa suíte, conforme o procedimento da autenticação. Capturas de segredos permanecem desabilitadas. Não executar builds/instalações em paralelo com navegador.
 
 A integração prova FKs multínúcleo, rollback real, revogação, reingresso com ID novo, último administrador concorrente e revalidação de sessão/papel após espera por lock. Testes não comprovam listas privadas, convites, auditoria definitiva ou publicação; essas capacidades ficam nas respectivas tarefas.
+
+## Convites de núcleo
+
+A [#9](https://github.com/vguerrax/kafofo/issues/9) acrescenta a migração `0003` e gestão de convites para administradores ativos do núcleo. Aplique `pnpm db:migrate` explicitamente. O link aparece uma vez na emissão; consultas posteriores mostram metadados e estado. Posse do link permite uma entrada como membro comum em sete dias, sem residência automática.
+
+O fragmento é removido da URL ao abrir e o token permanece somente em memória. Recarregar antes de aceitar exige reabrir o link original. Cadastro e aceitação confirmam juntos, sem iniciar sessão; depois, entre pelo login. Participante ativo mantém seu papel e não consome o convite.
+
+Configure `INVITATION_TEST_DATABASE_URL` com banco descartável exclusivo terminado em `_invitation_test`, diferente dos demais bancos, e execute sequencialmente:
+
+```bash
+pnpm --filter @kafofo/api test:invitations
+pnpm test:invitations:e2e
+```
+
+Navegador usa portas 4409/5409, sem capturas de segredos. `AUTH_TLS_CERT` e `AUTH_TLS_KEY` habilitam o percurso HTTPS local. As operações públicas têm limite compartilhado de 60 requisições/origem/minuto e cadastro tem adicional de dez/origem/minuto. Respostas 429 informam `Retry-After`; os contadores persistem mesmo quando a operação é revertida. Não executar builds ou instalações junto ao navegador.

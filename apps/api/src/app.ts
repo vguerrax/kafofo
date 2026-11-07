@@ -1,3 +1,5 @@
+import { invitationRoutes } from './modules/platform/invitations/routes.js';
+import type { InvitationService } from './modules/platform/invitations/service.js';
 import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyBaseLogger } from 'fastify';
 import swagger from '@fastify/swagger';
@@ -12,6 +14,7 @@ import type { AuthService } from './modules/platform/auth/service.js';
 import { AuthError } from './modules/platform/auth/policies.js';
 
 interface AppOptions {
+  invitations?: InvitationService;
   logger?: FastifyBaseLogger;
   database?: Pick<Database, 'ping' | 'close'>;
   auth?: AuthService;
@@ -89,6 +92,9 @@ export async function buildApp(options: AppOptions = {}) {
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   await app.register(authRoutes(options.auth, options.authOrigin), { prefix: '/api/auth' });
   await app.register(contextRoutes(options.contexts, options.authOrigin), {
+    prefix: '/api/platform',
+  });
+  await app.register(invitationRoutes(options.invitations, options.authOrigin), {
     prefix: '/api/platform',
   });
   app.addHook('onClose', async () => {

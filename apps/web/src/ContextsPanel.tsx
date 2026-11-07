@@ -1,3 +1,5 @@
+import { InvitationsPanel } from './InvitationsPanel';
+import { invitationEntry } from './invitation-api';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { Contexts, ResidenceInfo, MemberInfo, AccessInfo } from '@kafofo/contracts';
 import { contextApi } from './context-api';
@@ -76,7 +78,11 @@ export function ContextsPanel({
       .then((value) => {
         if (active) {
           setData(value);
-          setCoreId(value.cores[0]?.id ?? '');
+          setCoreId(
+            value.cores.find((c) => c.id === invitationEntry.coreId)?.id ??
+              value.cores[0]?.id ??
+              '',
+          );
           setReady(true);
         }
       })
@@ -375,6 +381,7 @@ export function ContextsPanel({
           )}
           {core.canManageMembers && (
             <>
+              <InvitationsPanel key={core.id} coreId={core.id} />
               <h4>Membros do núcleo</h4>
               <ul>
                 {members.map((m) => (

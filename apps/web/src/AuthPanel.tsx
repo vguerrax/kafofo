@@ -1,9 +1,23 @@
+import { InvitationPanel } from './InvitationPanel';
+import { invitationEntry, captureInvitation } from './invitation-api';
 import { ContextsPanel } from './ContextsPanel';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { SessionResponse } from '@kafofo/contracts';
 import { ApiError, changePassword, getSession, login, logout, setupAccount } from './api';
 
 export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolean }) {
+  const [inviting, setInviting] = useState(invitationEntry.opened);
+  const [invitationVersion, setInvitationVersion] = useState(0);
+  useEffect(() => {
+    const open = () => {
+      if (captureInvitation()) {
+        setInviting(true);
+        setInvitationVersion((v) => v + 1);
+      }
+    };
+    window.addEventListener('hashchange', open);
+    return () => window.removeEventListener('hashchange', open);
+  }, []);
   const [configured, setConfigured] = useState(initiallyConfigured);
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [loading, setLoading] = useState(initiallyConfigured);
@@ -147,7 +161,23 @@ export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolea
           <p>Use o código fornecido pelo operador do servidor para criar a primeira conta.</p>
         )
       )}
-      {session && (
+      {inviting && (
+        <InvitationPanel
+          key={invitationVersion}
+          session={session}
+          onAccepted={(alreadyMember) => {
+            setInviting(false);
+            setMessage(
+              alreadyMember
+                ? 'Você já pertence ao núcleo. O convite continua disponível.'
+                : session
+                  ? 'Participação confirmada.'
+                  : 'Conta criada. Entre com sua conta.',
+            );
+          }}
+        />
+      )}
+      {session && !inviting && (
         <ContextsPanel userId={session.user.id} onUnauthenticated={() => setSession(null)} />
       )}
       {message && (

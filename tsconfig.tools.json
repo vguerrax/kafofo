@@ -10,6 +10,7 @@
     "playwright.config.ts",
     "tests/**/*.ts",
     "playwright.auth.config.ts",
-    "playwright.contexts.config.ts"
+    "playwright.contexts.config.ts",
+    "playwright.invitations.config.ts"
   ]
 }
