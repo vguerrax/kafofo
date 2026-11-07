@@ -4,6 +4,8 @@ import swagger from '@fastify/swagger';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { Database } from './database/client.js';
 import { createLogger } from './logger.js';
+import { contextRoutes } from './modules/platform/contexts/routes.js';
+import type { ContextService } from './modules/platform/contexts/service.js';
 import { healthRoutes } from './modules/platform/health.js';
 import { authRoutes } from './modules/platform/auth/routes.js';
 import type { AuthService } from './modules/platform/auth/service.js';
@@ -13,6 +15,7 @@ interface AppOptions {
   logger?: FastifyBaseLogger;
   database?: Pick<Database, 'ping' | 'close'>;
   auth?: AuthService;
+  contexts?: ContextService;
   authOrigin?: string;
   trustedProxies?: string[];
 }
@@ -85,6 +88,9 @@ export async function buildApp(options: AppOptions = {}) {
   });
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   await app.register(authRoutes(options.auth, options.authOrigin), { prefix: '/api/auth' });
+  await app.register(contextRoutes(options.contexts, options.authOrigin), {
+    prefix: '/api/platform',
+  });
   app.addHook('onClose', async () => {
     await options.auth?.close();
     await options.database?.close();

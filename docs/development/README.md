@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. Núcleos, residências, convites, recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. Convites, recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -178,3 +178,20 @@ pnpm openapi:check
 OpenAPI é gerado das mesmas rotas/schemas usados na validação, em `artifacts/openapi.json`, e validado pelo Redocly. O arquivo gerado não é outra fonte editável de contratos nem é versionado. Não há versão de API pública aprovada por esta fundação; `0.0.0` identifica somente o scaffold.
 
 Logs Pino usam nível configurável. Serializadores de requisição não incluem URL, cabeçalhos ou corpo; erros internos não expõem mensagem/stack potencialmente sensível; campos conhecidos de segredo recebem redação. Isso não permite registrar objetos arbitrários de domínio sem revisão. Logs técnicos não substituem a auditoria/histórico da #15. Retenção e rotação operacional serão implementadas na #16.
+
+## Núcleos e residências
+
+A [#8](https://github.com/vguerrax/kafofo/issues/8) usa a migração `0002`, aplicada explicitamente por `pnpm db:migrate`. Após entrar, crie um núcleo e uma residência; responsável inicial é uma escolha explícita entre membros ativos. O seletor mostra as participações atuais. Administradores também veem metadados de residência para nomear responsáveis, sem acesso automático ao conteúdo.
+
+As rotas ficam sob `/api/platform`: contextos, criação de núcleo/residência, membros e acessos. Corpos e respostas constam no OpenAPI. São aplicadas as mesmas proteções de origem/cookies da autenticação. Conta sem participação não consulta nem modifica outro contexto; papéis retornados são atuais, sem cache de autorização.
+
+Configure `CONTEXT_TEST_DATABASE_URL` no ambiente com banco descartável exclusivo terminado em `_context_test`, diferente dos bancos normal, fundação, autenticação e POC. A suíte trunca tabelas desse banco para isolar cenários e nunca deve usar dados reais. Execute sequencialmente contra o mesmo banco:
+
+```bash
+pnpm --filter @kafofo/api test:contexts
+pnpm test:contexts:e2e
+```
+
+Navegador usa portas 4408/5408, API sem watch e fixtures internas, sem abrir cadastro público. Cobre criação e retomada, celular, teclado, nomeação/gestão por papéis, revogação em outra sessão e recuperação de 503. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` também habilitam HTTPS local nessa suíte, conforme o procedimento da autenticação. Capturas de segredos permanecem desabilitadas. Não executar builds/instalações em paralelo com navegador.
+
+A integração prova FKs multínúcleo, rollback real, revogação, reingresso com ID novo, último administrador concorrente e revalidação de sessão/papel após espera por lock. Testes não comprovam listas privadas, convites, auditoria definitiva ou publicação; essas capacidades ficam nas respectivas tarefas.

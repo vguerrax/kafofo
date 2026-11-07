@@ -15,6 +15,13 @@
       "when": 1794026885302,
       "tag": "0001_platform-auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794031096411,
+      "tag": "0002_platform-contexts",
+      "breakpoints": true
     }
   ]
 }

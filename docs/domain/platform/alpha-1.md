@@ -22,6 +22,30 @@ O fluxo da [#7](https://github.com/vguerrax/kafofo/issues/7) cria somente a prim
 
 Conta é global e independente dos núcleos. Autorização considera sessão, vínculo ativo, papel atual e concessão do recurso, inclusive histórico, resumos, exportação e lixeira.
 
+## Núcleo, residência e autorização contextual
+
+Refinamento da [#8](https://github.com/vguerrax/kafofo/issues/8): conta autenticada pode criar núcleo manualmente, recebendo participação e administração explícitas. Isso não altera a entrada por convite da #9, que não cria núcleo ou residência automaticamente. O primeiro administrador cria seu núcleo e depois a residência, indicando a si como responsável; interrupção entre etapas permite retomar pelo núcleo existente.
+
+| Operação | Ator autorizado na Alpha 1 |
+| --- | --- |
+| Criar residência e indicar seu responsável inicial | Administrador ativo daquele núcleo |
+| Nomear, alterar ou remover responsável | Administrador ativo daquele núcleo |
+| Conceder, alterar ou revogar colaborador/visualizador | Responsável ativo da própria residência |
+| Alterar papel no núcleo ou remover membro | Administrador ativo daquele núcleo |
+| Sair do núcleo | Próprio membro, preservando administrador ativo |
+
+Administrador global somente nomeia responsável se também administrar aquele núcleo. Responsável não nomeia outro responsável nem altera/revoga seu papel. Administrador do núcleo somente gerencia colaboradores/visualizadores quando também é responsável; pode rebaixar/remover um responsável por sua atribuição administrativa. Nomear a si próprio exige concessão explícita. Nenhuma dessas ações concede conteúdo privado de listas.
+
+Residência pertence a um único núcleo; toda concessão exige membro ativo do mesmo núcleo. Participar do núcleo não concede residência. Metadados administrativos de residências são consultáveis por administradores para nomeação de responsáveis, sem autorização implícita para conteúdo.
+
+Saída/remoção encerra as concessões residenciais daquela participação, preservando identidade e vínculos de outros núcleos. Reingresso e reconcessão geram novos IDs de vínculo; compartilhamentos recebidos antigos não devem ser reativados pelo Kitanda. Rebaixamento de papel aplica as capacidades atuais, sem duplicar concessão. A ausência de responsáveis após remoção de membro pode ser resolvida por nova nomeação administrativa.
+
+Núcleo ativo conserva ao menos um administrador: saída, remoção e rebaixamento do último são recusados, inclusive sob concorrência e quando for o único membro. Exclusão/recuperação de núcleos/residências e encerramento do núcleo sem membros não integram a #8; permanecem capacidades do MVP que exigem refinamento próprio.
+
+Nomes são texto simples, com 1–100 caracteres Unicode após trim, sem truncamento; nomes repetidos são aceitos. Endereço e demais campos não são exigidos por esta entrega.
+
+A autorização usa sessão e vínculos atuais no backend; o seletor de contexto não concede acesso. Mutação revalida sessão e papel sob locks, na ordem conta do ator → núcleo → residência, em uma transação/conexão. Revogação concluída impede novas operações; leituras já iniciadas podem refletir o estado anterior. PostgreSQL aplica unicidade ativa e FKs entre residência, participação e núcleo; esta entrega não introduz RLS. Auditoria definitiva permanece na #15.
+
 ## Convites
 
 Administrador do núcleo gera link revogável, válido por sete dias e para uma aceitação. Posse do link permite aceitar: não há vínculo obrigatório com e-mail. Pessoa cria conta ou usa uma existente e entra como membro comum, sem administração ou residência automática. Pessoa já participante não duplica vínculo nem consome convite. Consumo concorrente não permite duas aceitações. Link encaminhado pode ser usado por outra pessoa antes do destinatário pretendido; é limitação aceita do recorte.

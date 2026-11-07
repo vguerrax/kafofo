@@ -1,3 +1,4 @@
+import { ContextsPanel } from './ContextsPanel';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { SessionResponse } from '@kafofo/contracts';
 import { ApiError, changePassword, getSession, login, logout, setupAccount } from './api';
@@ -140,11 +141,14 @@ export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolea
         )}
       </div>
       {session ? (
-        <p>Olá, {session.user.name}. Ainda não há núcleo ou residência nesta conta.</p>
+        <p>Olá, {session.user.name}. Organize seus núcleos e residências.</p>
       ) : (
         !configured && (
           <p>Use o código fornecido pelo operador do servidor para criar a primeira conta.</p>
         )
+      )}
+      {session && (
+        <ContextsPanel userId={session.user.id} onUnauthenticated={() => setSession(null)} />
       )}
       {message && (
         <p role="status" className="notice">
