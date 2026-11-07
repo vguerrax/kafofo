@@ -64,6 +64,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_test
       POC_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_poc
       AUTH_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_auth_test
+      INVITATION_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_invitation_test
       CONTEXT_TEST_DATABASE_URL: postgresql://kafofo_ci:ci-only-password@127.0.0.1:5432/kafofo_context_test
     steps:
       - name: Checkout
@@ -88,6 +89,7 @@ jobs:
             await pool.query('CREATE DATABASE kafofo_auth_poc');
             await pool.query('CREATE DATABASE kafofo_auth_test');
             await pool.query('CREATE DATABASE kafofo_context_test');
+            await pool.query('CREATE DATABASE kafofo_invitation_test');
           } finally {
             await pool.end();
           }
@@ -138,3 +140,13 @@ jobs:
           AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:contexts:e2e
+
+      - name: Integração dos convites
+        run: pnpm --filter @kafofo/api test:invitations
+      - name: E2E dos convites em HTTP
+        run: pnpm test:invitations:e2e
+      - name: E2E dos convites em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:invitations:e2e

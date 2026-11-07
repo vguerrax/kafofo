@@ -50,6 +50,8 @@ A autorização usa sessão e vínculos atuais no backend; o seletor de contexto
 
 Administrador do núcleo gera link revogável, válido por sete dias e para uma aceitação. Posse do link permite aceitar: não há vínculo obrigatório com e-mail. Pessoa cria conta ou usa uma existente e entra como membro comum, sem administração ou residência automática. Pessoa já participante não duplica vínculo nem consome convite. Consumo concorrente não permite duas aceitações. Link encaminhado pode ser usado por outra pessoa antes do destinatário pretendido; é limitação aceita do recorte.
 
+A [#9](https://github.com/vguerrax/kafofo/issues/9) expõe gestão administrativa e consulta/aceitação sob `/api/platform`. Abrir o link mostra somente o nome do núcleo, sem consumir. Sessão ativa exige confirmação da conta; login existente retorna à confirmação. Cadastro confirma conta, participação e consumo na mesma transação, seguido de login obrigatório. Reingresso cria participação nova, sem restaurar acessos residenciais. Token fica no fragmento, removido ao abrir, e somente em memória durante login; recarga antes da aceitação exige reabrir o original. Após aceitar, conserva-se somente o identificador do núcleo, sujeito à verificação atual de participação no servidor.
+
 ## Senhas e sessões
 
 | Aspecto | Regra |

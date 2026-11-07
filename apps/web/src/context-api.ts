@@ -63,3 +63,4 @@ export const contextApi = {
   removeAccess: (res: string, user: string) =>
     request('/residences/' + res + '/accesses/' + encodeURIComponent(user), 'DELETE'),
 };
+export { json as platformJson, request as platformRequest };

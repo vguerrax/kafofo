@@ -23,7 +23,8 @@
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm openapi:check",
     "prepare": "husky",
     "test:auth:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.auth.config.ts",
-    "test:contexts:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.contexts.config.ts"
+    "test:contexts:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.contexts.config.ts",
+    "test:invitations:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.invitations.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
