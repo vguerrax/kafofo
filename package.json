@@ -25,7 +25,8 @@
     "test:auth:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.auth.config.ts",
     "test:contexts:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.contexts.config.ts",
     "test:invitations:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.invitations.config.ts",
-    "test:recovery:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.recovery.config.ts"
+    "test:recovery:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.recovery.config.ts",
+    "test:kitanda:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.kitanda.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

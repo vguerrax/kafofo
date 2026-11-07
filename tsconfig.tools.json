@@ -12,6 +12,7 @@
     "playwright.auth.config.ts",
     "playwright.contexts.config.ts",
     "playwright.invitations.config.ts",
-    "playwright.recovery.config.ts"
+    "playwright.recovery.config.ts",
+    "playwright.kitanda.config.ts"
   ]
 }

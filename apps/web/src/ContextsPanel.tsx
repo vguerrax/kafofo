@@ -1,3 +1,4 @@
+import { ListsPanel } from './ListsPanel';
 import { InvitationsPanel } from './InvitationsPanel';
 import { invitationEntry } from './invitation-api';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
@@ -303,6 +304,7 @@ export function ContextsPanel({
           )}
           {res && (
             <>
+              {res.role && <ListsPanel key={res.id} residenceId={res.id} role={res.role} />}
               <p>
                 Seu papel na residência:{' '}
                 <span>{res.role ? roleLabel[res.role] : 'sem acesso ao conteúdo'}</span>
