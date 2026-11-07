@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; recuperação, listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -81,7 +81,7 @@ Esse comando imprime somente o código, com validade de 30 minutos e uso único.
 | `POST /api/auth/logout`   | Revoga sessão atual e limpa cookie; idempotente                |
 | `POST /api/auth/password` | Senha atual/nova; preserva prazo atual e revoga outras sessões |
 
-Corpos e respostas constam em `/api/openapi.json`. Mutações exigem `Origin` exatamente igual a `AUTH_BASE_URL` e não permitem `Sec-Fetch-Site: cross-site`. Cookies são host-only, `HttpOnly`, `SameSite=Lax` e `Secure` em HTTPS. A sessão expira sete dias após login, sem renovação por atividade ou cache que prolongue acesso revogado. Não há handler nativo genérico, cadastro livre ou recuperação HTTP nesta entrega.
+Corpos e respostas constam em `/api/openapi.json`. Mutações exigem `Origin` exatamente igual a `AUTH_BASE_URL` e não permitem `Sec-Fetch-Site: cross-site`. Cookies são host-only, `HttpOnly`, `SameSite=Lax` e `Secure` em HTTPS. A sessão expira sete dias após login, sem renovação por atividade ou cache que prolongue acesso revogado. Não há handler nativo genérico ou cadastro livre. A recuperação usa somente as rotas específicas da #10, descritas abaixo.
 
 Cinco falhas de login/conta em 15 minutos suspendem o login por 15 minutos, sem revogar sessões válidas. Limite adicional: 60 tentativas/origem/minuto. Na troca, o contador independente de senha atual bloqueia a troca por 15 minutos e revoga todas as sessões na quinta falha; novo login não limpa esse bloqueio. Bootstrap HTTP aceita até dez submissões/origem/minuto. Erros 429 informam `Retry-After`.
 
@@ -210,3 +210,26 @@ pnpm test:invitations:e2e
 ```
 
 Navegador usa portas 4409/5409, sem capturas de segredos. `AUTH_TLS_CERT` e `AUTH_TLS_KEY` habilitam o percurso HTTPS local. As operações públicas têm limite compartilhado de 60 requisições/origem/minuto e cadastro tem adicional de dez/origem/minuto. Respostas 429 informam `Retry-After`; os contadores persistem mesmo quando a operação é revertida. Não executar builds ou instalações junto ao navegador.
+
+## Recuperação de acesso
+
+A [#10](https://github.com/vguerrax/kafofo/issues/10) usa a migração `0004`, aplicada explicitamente por `pnpm db:migrate`. O administrador global encontra “Recuperar outra conta” após login. Antes de emitir, confirme a identidade da pessoa por um canal conhecido; confira o username e entregue o link manualmente em canal privado. Não solicite nem defina a senha do titular. Administrador de núcleo não pode emitir. Não há recuperação pública por username nem envio de e-mail.
+
+Para recuperar um administrador global, o operador autorizado executa no servidor, com a configuração da instalação:
+
+```bash
+pnpm --filter @kafofo/api auth:recover <username-do-administrador-global>
+```
+
+O comando não recebe senha. Identifica o operador pelo UID local no evento e imprime o link somente em stdout; não encaminhe a saída a logs, tickets ou histórico compartilhado. Em uma instalação com wrapper de logging, use uma sessão administrativa privada sem captura da saída. O acesso ao ambiente e às credenciais do banco é a autoridade operacional; não exponha esse comando por HTTP. Erros são genéricos em stderr e não incluem conexão ou link.
+
+Os dois canais compartilham três emissões por conta-alvo em uma hora. Reemissão bem-sucedida invalida o link anterior, mas não revoga sessões até a senha ser redefinida. Link vale 30 minutos. Ao abrir, a página valida por POST sem consumir e remove o fragmento; após recarga, reabra o original. Cinco senhas inválidas pelo link válido o revogam. Conclusão encerra todas as sessões e exige login com a nova senha. Emissão e uso geram eventos sem segredos; consulta e gestão da auditoria pertencem à #15.
+
+Configure `RECOVERY_TEST_DATABASE_URL` com banco descartável exclusivo terminado em `_recovery_test`, diferente dos demais bancos. Execute sequencialmente:
+
+```bash
+pnpm --filter @kafofo/api test:recovery
+pnpm test:recovery:e2e
+```
+
+Navegador usa servidores exclusivos nas portas 4410/5410, sem capturas de segredos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Integração inclui comando local, concorrência, rollback e auditoria. Os limites de consulta e envio são separados, 30 requisições/origem/minuto cada, com `Retry-After`; cadastro ou login não limpam esses contadores. A emissão HTTP também tem limite de 30/origem/minuto, além da cota por alvo. Não execute builds/instalações junto ao navegador.

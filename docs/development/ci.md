@@ -44,3 +44,5 @@ O check de qualidade inclui os testes unitários da POC; banco e navegador são 
 A #8 acrescenta integração e navegador de núcleos/residências: `pnpm --filter @kafofo/api test:contexts` e `pnpm test:contexts:e2e`, com PostgreSQL exclusivo `kafofo_context_test` em `CONTEXT_TEST_DATABASE_URL`. O navegador roda em HTTP e HTTPS local, sem compartilhar o banco da #7/POC ou capturar segredos.
 
 A #9 acrescenta `pnpm --filter @kafofo/api test:invitations` e `pnpm test:invitations:e2e`, com banco exclusivo `kafofo_invitation_test` em `INVITATION_TEST_DATABASE_URL`. O CI executa integração e navegador em HTTP/HTTPS local; os servidores usam portas 4409/5409, sem capturas de segredos.
+
+A #10 acrescenta integração de recuperação e navegador HTTP/HTTPS: `pnpm --filter @kafofo/api test:recovery` e `pnpm test:recovery:e2e`. O banco exclusivo `kafofo_recovery_test` é configurado em `RECOVERY_TEST_DATABASE_URL`. Servidores usam 4410/5410 e não capturam segredos. A suíte de integração testa também o comando local, sem usar o banco do produto.
