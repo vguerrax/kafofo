@@ -45,7 +45,7 @@ describe('sessões e proteção de tentativas', () => {
     const key = 'account:' + user.username;
     await locker.query('begin');
     await locker.query('select pg_advisory_xact_lock(hashtext($1))', [key]);
-    let loggedOut: ReturnType<typeof f.app.inject> | undefined;
+    let loggedOut: ReturnType<typeof change> | undefined;
     let changed: ReturnType<typeof change> | undefined;
     const waitFor = async (minimum: number) => {
       const deadline = Date.now() + 700;
