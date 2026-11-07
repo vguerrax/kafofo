@@ -397,3 +397,25 @@ it('sessão revogada durante espera não concede mutação na lista', async () =
     (await db.pool.query('select name from kitanda.lists where id=$1', [list.id])).rows[0].name,
   ).toBe('Original');
 });
+it('404 é indistinguível para lista inexistente e invisível, inclusive fora da residência', async () => {
+  const { owner, member, outsider, residence } = await fixture(),
+    list = await kitanda.create(owner.headers, residence.id, { name: 'Segredo' });
+  for (const actor of [member, outsider]) {
+    const headers = { cookie: actor.headers.get('cookie')! };
+    const invisible = await app.inject({ url: '/api/kitanda/lists/' + list.id, headers });
+    const missing = await app.inject({ url: '/api/kitanda/lists/' + randomUUID(), headers });
+    expect(invisible.statusCode).toBe(404);
+    expect(missing.statusCode).toBe(404);
+    const { requestId: invisibleId, ...invisibleError } = invisible.json().error as Record<
+      string,
+      unknown
+    >;
+    const { requestId: missingId, ...missingError } = missing.json().error as Record<
+      string,
+      unknown
+    >;
+    expect(invisibleId).toBeDefined();
+    expect(missingId).toBeDefined();
+    expect(invisibleError).toEqual(missingError);
+  }
+});

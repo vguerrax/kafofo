@@ -69,7 +69,10 @@ export function createListAccess(options: PlatformAccessOptions) {
           throw listForbidden();
         return operation(c, actor, row);
       },
-    );
+    ).catch((error: unknown) => {
+      if (error instanceof AuthError && error.status === 404) throw listNotFound();
+      throw error;
+    });
   }
   return { scope, run };
 }

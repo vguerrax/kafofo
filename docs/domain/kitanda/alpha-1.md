@@ -32,7 +32,7 @@ Criar lista exige papel responsável/colaborador. Somente o criador compartilha/
 
 ### Contrato técnico de listas e compartilhamento
 
-A [#11](https://github.com/vguerrax/kafofo/issues/11) entrega metadados e compartilhamentos sob `/api/kitanda`, somente para residência. Coleção e detalhe filtram autoria ou concessão vigente, além de sessão e acesso atual à residência. Lista invisível ou inexistente retorna 404; ação proibida sobre lista visível retorna 403. Candidatos e gestão de concessões exigem criador com papel atual de escrita. O seletor recebe somente identificador da concessão residencial e nome de exibição.
+A [#11](https://github.com/vguerrax/kafofo/issues/11) entrega metadados e compartilhamentos sob `/api/kitanda`, somente para residência. Coleção e detalhe filtram autoria ou concessão vigente, além de sessão e acesso atual à residência. Lista invisível ou inexistente retorna 404 com a mesma mensagem, inclusive fora da residência; ação proibida sobre lista visível retorna 403. Candidatos e gestão de concessões exigem criador com papel atual de escrita. O seletor recebe somente identificador da concessão residencial e nome de exibição.
 
 Autoria referencia a conta; compartilhamento referencia o ID da concessão residencial. Papel alterado no mesmo ID muda as capacidades, enquanto revogação e nova concessão não reativam compartilhamentos antigos. PUT repetido não duplica concessão ativa; DELETE repetido é idempotente para quem ainda gerencia. Compartilhar novamente após revogação cria ID de compartilhamento novo. Chaves compostas impedem associação entre lista e concessão de outra residência.
 
