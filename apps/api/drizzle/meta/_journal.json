@@ -8,6 +8,13 @@
       "when": 1794001990046,
       "tag": "0000_platform-schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794026885302,
+      "tag": "0001_platform-auth",
+      "breakpoints": true
     }
   ]
 }
