@@ -5,10 +5,16 @@ import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { Database } from './database/client.js';
 import { createLogger } from './logger.js';
 import { healthRoutes } from './modules/platform/health.js';
+import { authRoutes } from './modules/platform/auth/routes.js';
+import type { AuthService } from './modules/platform/auth/service.js';
+import { AuthError } from './modules/platform/auth/policies.js';
 
 interface AppOptions {
   logger?: FastifyBaseLogger;
   database?: Pick<Database, 'ping' | 'close'>;
+  auth?: AuthService;
+  authOrigin?: string;
+  trustedProxies?: string[];
 }
 
 export async function buildApp(options: AppOptions = {}) {
@@ -17,10 +23,17 @@ export async function buildApp(options: AppOptions = {}) {
     requestIdHeader: false,
     genReqId: () => randomUUID(),
     bodyLimit: 64 * 1024,
+    trustProxy: options.trustedProxies?.length ? options.trustedProxies : false,
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AuthError) {
+      if (error.retryAfter) reply.header('Retry-After', String(error.retryAfter));
+      return reply
+        .code(error.status)
+        .send({ error: { code: error.code, message: error.message, requestId: request.id } });
+    }
     const validation = error instanceof Error && 'validation' in error;
     const status = validation
       ? 400
@@ -55,13 +68,25 @@ export async function buildApp(options: AppOptions = {}) {
       info: { title: 'Kafofo API', version: '0.0.0' },
       servers: [{ url: '/' }],
       tags: [{ name: 'platform', description: 'Serviços básicos da plataforma' }],
+      components: {
+        securitySchemes: {
+          sessionCookie: { type: 'apiKey', in: 'cookie', name: 'better-auth.session_token' },
+          secureSessionCookie: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: '__Secure-better-auth.session_token',
+          },
+        },
+      },
     },
   });
   await app.register(healthRoutes(options.database?.ping ?? (async () => false)), {
     prefix: '/api',
   });
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger());
+  await app.register(authRoutes(options.auth, options.authOrigin), { prefix: '/api/auth' });
   app.addHook('onClose', async () => {
+    await options.auth?.close();
     await options.database?.close();
   });
   return app;
