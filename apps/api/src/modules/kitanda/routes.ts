@@ -40,6 +40,25 @@ export function kitandaRoutes(
         { additionalProperties: false },
       );
     const h = (cookie: string | undefined) => new Headers(cookie ? { cookie } : {});
+    app.get(
+      '/lists/:listId/history',
+      {
+        schema: {
+          operationId: 'listHistory',
+          summary: 'Consultar histórico autorizado inclusive na lixeira',
+          tags,
+          security,
+          params: list,
+          querystring: c.HistoryQuerySchema,
+          response: { 200: c.HistoryPageSchema, ...errors },
+        },
+      },
+      (req) =>
+        service!.history(h(req.headers.cookie), req.params.listId, {
+          ...(req.query.cursor ? { cursor: req.query.cursor } : {}),
+          ...(req.query.limit ? { limit: Number(req.query.limit) } : {}),
+        }),
+    );
     app.post(
       '/lists/:listId/items/clear-purchased',
       {

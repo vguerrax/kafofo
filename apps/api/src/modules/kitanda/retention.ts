@@ -1,15 +1,16 @@
 import type pg from 'pg';
 import { createResidenceMaintenance, type PlatformAccessOptions } from '../platform/public.js';
+import { historyRetention } from './history-record.js';
 
-// A #15 deve fornecer redação/remoção do histórico nesta mesma conexão/transação
-// antes da publicação. Os comprovantes operacionais não substituem os eventos.
+// Redação/remoção do histórico usa a mesma conexão/transação do expurgo.
 export interface RetentionHistory {
   redactItem: (c: pg.PoolClient, listId: string, itemId: string) => Promise<void>;
   removeList: (c: pg.PoolClient, listId: string) => Promise<void>;
 }
 export function retentionMaintenance(
   options: Pick<PlatformAccessOptions, 'pool'>,
-  history?: RetentionHistory,
+  history: RetentionHistory = historyRetention,
+  additionalCleanup?: () => Promise<void>,
 ) {
   const run = createResidenceMaintenance(options.pool);
   async function purge() {
@@ -36,7 +37,7 @@ export function retentionMaintenance(
               )
             ).rowCount;
             if (!due) return false;
-            await history?.redactItem(c, candidate.listId, candidate.id);
+            await history.redactItem(c, candidate.listId, candidate.id);
             await c.query('delete from kitanda.items where id=$1', [candidate.id]);
           } else {
             const due = (
@@ -46,7 +47,7 @@ export function retentionMaintenance(
               )
             ).rowCount;
             if (!due) return false;
-            await history?.removeList(c, candidate.id);
+            await history.removeList(c, candidate.id);
             await c.query('delete from kitanda.items where "listId"=$1', [candidate.id]);
             await c.query('delete from kitanda.list_shares where "listId"=$1', [candidate.id]);
             await c.query(
@@ -58,6 +59,13 @@ export function retentionMaintenance(
           return true;
         });
         if (removed) result[candidate.kind === 'item' ? 'items' : 'lists']++;
+      } catch {
+        result.failed++;
+      }
+    }
+    if (additionalCleanup) {
+      try {
+        await additionalCleanup();
       } catch {
         result.failed++;
       }

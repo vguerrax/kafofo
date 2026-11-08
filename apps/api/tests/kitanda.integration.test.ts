@@ -280,7 +280,8 @@ it('IDs e corpos HTTP estritos, origem e superfícies futuras fechadas', async (
       })
     ).statusCode,
   ).toBe(403);
-  for (const suffix of ['/history', '/summary', '/trash'])
+  // Histórico é entregue pela #15; estas superfícies permanecem fora do contrato.
+  for (const suffix of ['/summary', '/trash'])
     expect(
       (await app.inject({ url: '/api/kitanda/lists/' + id + suffix, headers })).statusCode,
     ).toBe(404);

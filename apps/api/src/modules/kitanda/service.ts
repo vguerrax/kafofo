@@ -11,11 +11,14 @@ import {
 } from './access.js';
 import { listFields } from './policies.js';
 import { createLifecycleService } from './lifecycle.js';
+import { createHistoryService } from './history.js';
+import { changes, recordHistory } from './history-record.js';
 export function createKitandaService(options: PlatformAccessOptions) {
   const { scope, run } = createListAccess(options);
   const receipts = receiptMaintenance(options),
     lifecycle = createLifecycleService(options);
   return {
+    history: createHistoryService(options),
     ...receipts,
     ...lifecycle,
     async close() {
@@ -49,7 +52,7 @@ export function createKitandaService(options: PlatformAccessOptions) {
       scope(headers, residenceId, null, async (c, a) => {
         if (a.role === 'viewer') throw listForbidden();
         const fields = listFields(input);
-        const payload = { name: fields.name, description: fields.description ?? null };
+        const payload = { name: fields.name!, description: fields.description ?? null };
         return confirm(
           c,
           { userId: a.userId, action: 'list.create', parentId: residenceId, key },
@@ -60,6 +63,12 @@ export function createKitandaService(options: PlatformAccessOptions) {
               'insert into kitanda.lists(id,"residenceId","creatorId",name,description) values($1,$2,$3,$4,$5)',
               [id, residenceId, a.userId, payload.name, payload.description],
             );
+            await recordHistory(c, {
+              listId: id,
+              actorId: a.userId,
+              action: 'list.created',
+              details: { changes: changes(null, payload) },
+            });
             return { resourceId: id };
           },
           options.now ?? Date.now,
@@ -69,6 +78,12 @@ export function createKitandaService(options: PlatformAccessOptions) {
     update: (h: Headers, id: string, input: { name?: string; description?: string }) =>
       run(h, id, 'write', async (c, a, r) => {
         const fields = listFields(input);
+        const next = {
+          name: fields.name ?? r.name,
+          description: fields.description === undefined ? r.description : fields.description,
+        };
+        const differences = changes({ name: r.name, description: r.description }, next);
+        if (!Object.keys(differences).length) return listInfo(r, a);
         const row = (
           await c.query<ListRow>(
             'update kitanda.lists set name=$2,description=$3,"updatedAt"=now() where id=$1 returning *',
@@ -79,6 +94,12 @@ export function createKitandaService(options: PlatformAccessOptions) {
             ],
           )
         ).rows[0]!;
+        await recordHistory(c, {
+          listId: id,
+          actorId: a.userId,
+          action: 'list.updated',
+          details: { changes: differences },
+        });
         return listInfo(row, a);
       }),
     candidates: (h: Headers, id: string) =>
@@ -100,26 +121,46 @@ export function createKitandaService(options: PlatformAccessOptions) {
         });
       }),
     share: (h: Headers, id: string, accessId: string) =>
-      run(h, id, 'manage', async (c, _a, r) => {
-        if (
-          !(await residenceCandidates(c, r.residenceId, r.creatorId)).some((a) => a.id === accessId)
-        )
+      run(h, id, 'manage', async (c, a, r) => {
+        const target = (await residenceCandidates(c, r.residenceId, r.creatorId)).find(
+          (a) => a.id === accessId,
+        );
+        if (!target)
           throw new AuthError(
             400,
             'INVALID_SHARE_TARGET',
             'Escolha uma pessoa com acesso ativo a esta residência.',
           );
-        await c.query(
-          'insert into kitanda.list_shares(id,"listId","residenceId","residenceAccessId") values($1,$2,$3,$4) on conflict("listId","residenceAccessId") where "revokedAt" is null do nothing',
+        const result = await c.query(
+          'insert into kitanda.list_shares(id,"listId","residenceId","residenceAccessId") values($1,$2,$3,$4) on conflict("listId","residenceAccessId") where "revokedAt" is null do nothing returning id',
           [randomUUID(), r.id, r.residenceId, accessId],
         );
+        if (result.rowCount)
+          await recordHistory(c, {
+            listId: id,
+            actorId: a.userId,
+            action: 'share.granted',
+            details: { participant: target },
+          });
       }),
     revoke: (h: Headers, id: string, accessId: string) =>
-      run(h, id, 'manage', async (c, _a, r) => {
-        await c.query(
+      run(h, id, 'manage', async (c, a, r) => {
+        const target = (await residenceCandidates(c, r.residenceId, r.creatorId)).find(
+          (a) => a.id === accessId,
+        );
+        const result = await c.query(
           'update kitanda.list_shares set "revokedAt"=now() where "listId"=$1 and "residenceId"=$2 and "residenceAccessId"=$3 and "revokedAt" is null',
           [r.id, r.residenceId, accessId],
         );
+        if (result.rowCount)
+          await recordHistory(c, {
+            listId: id,
+            actorId: a.userId,
+            action: 'share.revoked',
+            details: {
+              participant: target ?? { id: accessId, name: 'Participante sem acesso atual' },
+            },
+          });
       }),
   };
 }

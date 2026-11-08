@@ -1,6 +1,7 @@
 import { createItemService } from '../src/modules/kitanda/items.js';
 import { createKitandaService } from '../src/modules/kitanda/service.js';
 import { retentionMaintenance } from '../src/modules/kitanda/retention.js';
+import { historyRetention } from '../src/modules/kitanda/history-record.js';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { kitandaDatabase } from './kitanda-database.js';
@@ -523,11 +524,13 @@ it('ponto de integração do histórico compartilha transação e rollback com e
     );
     const hooks = {
       redactItem: async (c: import('pg').PoolClient, _list: string, id: string) => {
+        await historyRetention.redactItem(c, _list, id);
         await c.query('update kitanda.retention_contract_test set content=null where "itemId"=$1', [
           id,
         ]);
       },
       removeList: async (c: import('pg').PoolClient, id: string) => {
+        await historyRetention.removeList(c, id);
         await c.query('delete from kitanda.retention_contract_test where "listId"=$1', [id]);
       },
     };

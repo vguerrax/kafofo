@@ -37,7 +37,7 @@ const app = await buildApp({
 });
 kitanda?.startCleanup(() => logger.error('Falha na limpeza de comprovantes do Kitanda.'));
 kitanda?.startPurge(() =>
-  logger.error('Falha no expurgo do Kitanda; nova tentativa no próximo ciclo.'),
+  logger.error('Falha no expurgo de dados retidos; nova tentativa no próximo ciclo.'),
 );
 auth?.startCleanup(() => logger.error('Falha na limpeza de registros expirados de autenticação.'));
 

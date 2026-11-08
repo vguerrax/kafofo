@@ -6,6 +6,8 @@ export default defineConfig({
       'tests/items.integration.test.ts',
       'tests/collaboration.integration.test.ts',
       'tests/lifecycle.integration.test.ts',
+      'tests/history.integration.test.ts',
+      'tests/security-audit.integration.test.ts',
     ],
     fileParallelism: false,
     testTimeout: 30000,

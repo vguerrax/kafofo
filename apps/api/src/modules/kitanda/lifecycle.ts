@@ -1,5 +1,6 @@
 import type { ClearTarget } from '@kafofo/contracts';
-import { AuthError, type PlatformAccessOptions } from '../platform/public.js';
+import { AuthError, purgeSecurityAudit, type PlatformAccessOptions } from '../platform/public.js';
+import { historyRetention, recordHistory } from './history-record.js';
 import { createListAccess, listNotFound, listVisibility } from './access.js';
 import { listCapabilities } from './policies.js';
 import { confirm } from './receipts.js';
@@ -21,7 +22,9 @@ export function createLifecycleService(options: PlatformAccessOptions) {
   const { scope, run } = createListAccess(options),
     now = options.now ?? Date.now;
   return {
-    ...retentionMaintenance(options),
+    ...retentionMaintenance(options, historyRetention, () =>
+      purgeSecurityAudit(options.pool).then(() => undefined),
+    ),
     clearPurchased: (h: Headers, listId: string, targets: ClearTarget[], key: string) =>
       run(h, listId, 'write', async (c, a) => {
         // Ordenação torna a impressão independente da ordem visual do conjunto.
@@ -43,8 +46,9 @@ export function createLifecycleService(options: PlatformAccessOptions) {
                 version: number;
                 purchased: boolean;
                 deletedAt: Date | null;
+                name: string;
               }>(
-                'select id,version,purchased,"deletedAt" from kitanda.items where "listId"=$1 and id=any($2::uuid[])',
+                'select id,name,version,purchased,"deletedAt" from kitanda.items where "listId"=$1 and id=any($2::uuid[])',
                 [listId, selection.map((t) => t.itemId)],
               )
             ).rows;
@@ -66,6 +70,15 @@ export function createLifecycleService(options: PlatformAccessOptions) {
               'update kitanda.items set "deletedAt"=statement_timestamp(),"updatedAt"=statement_timestamp(),version=version+1 where "listId"=$1 and id=any($2::uuid[])',
               [listId, selection.map((t) => t.itemId)],
             );
+            await recordHistory(c, {
+              listId,
+              actorId: a.userId,
+              action: 'items.cleared',
+              targets: rows.map((r) => ({
+                itemId: r.id,
+                details: { name: r.name, changes: { deleted: { before: false, after: true } } },
+              })),
+            });
             return { resourceId: listId };
           },
           now,
@@ -88,6 +101,7 @@ export function createLifecycleService(options: PlatformAccessOptions) {
                 'update kitanda.lists set "deletedAt"=clock_timestamp(),"deletedBy"=$2,"lifecycleRevision"="lifecycleRevision"+1,"updatedAt"=statement_timestamp() where id=$1',
                 [listId, a.userId],
               );
+              await recordHistory(c, { listId, actorId: a.userId, action: 'list.removed' });
               return { resourceId: listId, version: row.lifecycleRevision + 1 };
             },
             now,
@@ -136,6 +150,7 @@ export function createLifecycleService(options: PlatformAccessOptions) {
                 [listId],
               );
               if (!restored.rowCount) throw listNotFound();
+              await recordHistory(c, { listId, actorId: a.userId, action: 'list.restored' });
               return { resourceId: listId, version: row.lifecycleRevision + 1 };
             },
             now,
