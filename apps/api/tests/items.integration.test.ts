@@ -1,3 +1,4 @@
+import { listActions, itemActions } from './kitanda-actions.js';
 import { createItemService } from '../src/modules/kitanda/items.js';
 import { createLogger } from '../src/logger.js';
 import { createKitandaService } from '../src/modules/kitanda/service.js';
@@ -14,8 +15,8 @@ const baseURL = 'http://127.0.0.1:5304',
   secret = randomUUID() + randomUUID(),
   password = 'test-password';
 let db: Awaited<ReturnType<typeof kitandaDatabase>>;
-let items: ReturnType<typeof createItemService>;
-let kitanda: ReturnType<typeof createKitandaService>;
+let items: ReturnType<typeof itemActions>;
+let kitanda: ReturnType<typeof listActions>;
 let clock = Date.now();
 let logs = '';
 let service: ReturnType<typeof createContextService>;
@@ -40,8 +41,10 @@ beforeAll(async () => {
   options = { pool: db.pool, secret, baseURL };
   auth = createAuthService(options);
   service = createContextService(options);
-  items = createItemService(options);
-  kitanda = createKitandaService({ ...options, now: () => clock });
+  const itemCommands = createItemService(options);
+  items = itemActions(itemCommands);
+  const kitandaCommands = createKitandaService({ ...options, now: () => clock });
+  kitanda = listActions(kitandaCommands);
   app = await buildApp({
     logger: createLogger('info', {
       write: (line: string) => {
@@ -51,8 +54,8 @@ beforeAll(async () => {
     auth,
     authOrigin: baseURL,
     contexts: service,
-    kitanda,
-    items,
+    kitanda: kitandaCommands,
+    items: itemCommands,
   });
 });
 beforeEach(async () => {
@@ -248,7 +251,11 @@ it('HTTP valida decimais e schemas, nega origem e não expõe ações futuras', 
   const { owner, residence } = await fixture(),
     list = await kitanda.create(owner.headers, residence.id, { name: 'Lista' }),
     url = '/api/kitanda/lists/' + list.id + '/items',
-    headers = { origin: baseURL, cookie: owner.headers.get('cookie')! };
+    headers = {
+      origin: baseURL,
+      cookie: owner.headers.get('cookie')!,
+      'idempotency-key': randomUUID(),
+    };
   for (const payload of [
     { name: 'Item', quantity: '1e3' },
     { name: 'Item', quantity: 1 },
@@ -264,12 +271,12 @@ it('HTTP valida decimais e schemas, nega origem e não expõe ações futuras', 
     payload: { name: 'Item', quantity: '0.500' },
   });
   expect(response.statusCode).toBe(201);
-  expect(response.json().quantity).toBe('0.5');
+  expect((await app.inject({ url, headers })).json().items[0].quantity).toBe('0.5');
   expect(
     (
       await app.inject({
         method: 'PATCH',
-        url: url + '/' + response.json().id,
+        url: url + '/' + response.json().resourceId,
         headers,
         payload: {},
       })
@@ -279,7 +286,7 @@ it('HTTP valida decimais e schemas, nega origem e não expõe ações futuras', 
     (
       await app.inject({
         method: 'PUT',
-        url: url + '/' + response.json().id + '/purchased',
+        url: url + '/' + response.json().resourceId + '/purchased',
         headers: { cookie: headers.cookie },
         payload: { purchased: true },
       })
@@ -293,7 +300,11 @@ it('logs não incluem conteúdo dos itens', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/kitanda/lists/' + list.id + '/items',
-    headers: { origin: baseURL, cookie: owner.headers.get('cookie')! },
+    headers: {
+      origin: baseURL,
+      cookie: owner.headers.get('cookie')!,
+      'idempotency-key': randomUUID(),
+    },
     payload: { name: 'private-item-marker', notes: 'private-note-marker' },
   });
   expect(response.statusCode).toBe(201);

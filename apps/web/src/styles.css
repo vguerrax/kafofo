@@ -186,3 +186,12 @@ select:focus-visible {
   padding: 16px;
   background: #fff;
 }
+
+.lists-panel fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}

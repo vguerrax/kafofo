@@ -1,198 +1,252 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import type { ItemInfo, ItemCreate, ItemUpdate } from '@kafofo/contracts';
-import { itemApi } from './kitanda-api';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import type { ItemInfo, ItemSnapshot } from '@kafofo/contracts';
+import { itemApi, prepareCommand } from './kitanda-api';
 import { ApiError } from './api';
 import { quantityInput, progressLabel } from './item-format';
-function inputFrom(form: HTMLFormElement): ItemCreate {
-  const fields = new FormData(form),
-    value = (key: string) => String(fields.get(key) ?? '');
-  return {
-    name: value('name'),
-    quantity: quantityInput(value('quantity')),
-    unit: value('unit') || null,
-    notes: value('notes') || null,
-  };
-}
-function ItemFields({ prefix, item }: { prefix: string; item?: ItemInfo }) {
+import { createItemFeed } from './item-feed';
+import { useConfirmation } from './use-confirmation';
+import { PendingNotice } from './PendingNotice';
+type Draft = { name: string; quantity: string; unit: string; notes: string };
+const empty = (): Draft => ({ name: '', quantity: '', unit: '', notes: '' });
+const draftOf = (r: ItemInfo): Draft => ({
+  name: r.name,
+  quantity: r.quantity?.replace('.', ',') ?? '',
+  unit: r.unit ?? '',
+  notes: r.notes ?? '',
+});
+const payload = (d: Draft) => ({
+  name: d.name,
+  quantity: quantityInput(d.quantity),
+  unit: d.unit || null,
+  notes: d.notes || null,
+});
+function Fields({
+  prefix,
+  values,
+  onChange,
+  edit = false,
+}: {
+  prefix: string;
+  values: Draft;
+  onChange: (draft: Draft) => void;
+  edit?: boolean;
+}) {
   return (
     <>
-      <label htmlFor={prefix + '-name'}>{item ? 'Nome do item' : 'Nome do novo item'}</label>
-      <input
-        id={prefix + '-name'}
-        name="name"
-        defaultValue={item?.name ?? ''}
-        required
-        maxLength={8192}
-      />
-      <label htmlFor={prefix + '-quantity'}>
-        {item ? 'Quantidade do item' : 'Quantidade do novo item'}
-      </label>
-      <input
-        id={prefix + '-quantity'}
-        name="quantity"
-        inputMode="decimal"
-        defaultValue={item?.quantity?.replace('.', ',') ?? ''}
-        maxLength={1024}
-      />
-      <label htmlFor={prefix + '-unit'}>{item ? 'Unidade do item' : 'Unidade do novo item'}</label>
-      <input id={prefix + '-unit'} name="unit" defaultValue={item?.unit ?? ''} maxLength={8192} />
-      <label htmlFor={prefix + '-notes'}>
-        {item ? 'Observação do item' : 'Observação do novo item'}
-      </label>
-      <textarea
-        id={prefix + '-notes'}
-        name="notes"
-        defaultValue={item?.notes ?? ''}
-        maxLength={8192}
-      />
+      {(['name', 'quantity', 'unit', 'notes'] as const).map((key) => {
+        const label =
+            { name: 'Nome', quantity: 'Quantidade', unit: 'Unidade', notes: 'Observação' }[key] +
+            (edit ? ' do item' : ' do novo item'),
+          id = prefix + '-' + key;
+        return (
+          <div key={key}>
+            <label htmlFor={id}>{label}</label>
+            {key === 'notes' ? (
+              <textarea
+                id={id}
+                value={values[key]}
+                onChange={(e) => onChange({ ...values, [key]: e.target.value })}
+                maxLength={8192}
+              />
+            ) : (
+              <input
+                id={id}
+                value={values[key]}
+                onChange={(e) => onChange({ ...values, [key]: e.target.value })}
+                required={key === 'name'}
+                inputMode={key === 'quantity' ? 'decimal' : 'text'}
+                maxLength={key === 'quantity' ? 1024 : 8192}
+              />
+            )}
+          </div>
+        );
+      })}
     </>
-  );
-}
-function ItemRow({
-  item,
-  canWrite,
-  busy,
-  onSave,
-  onPurchased,
-  onRemove,
-}: {
-  item: ItemInfo;
-  canWrite: boolean;
-  busy: boolean;
-  onSave: (input: ItemUpdate) => Promise<boolean>;
-  onPurchased: () => void;
-  onRemove: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  async function save(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (await onSave(inputFrom(e.currentTarget))) setEditing(false);
-  }
-  return (
-    <section aria-label={'Item ' + item.name}>
-      <h6>{item.name}</h6>
-      {(item.quantity !== null || item.unit !== null) && (
-        <p>
-          {item.quantity?.replace('.', ',')} {item.unit}
-        </p>
-      )}
-      {item.notes && <p className="list-description">{item.notes}</p>}
-      {canWrite && (
-        <>
-          <button disabled={busy} aria-pressed={item.purchased} onClick={onPurchased}>
-            {item.purchased ? 'Desmarcar' : 'Marcar comprado'}: {item.name}
-          </button>
-          <button disabled={busy} onClick={() => setEditing((v) => !v)}>
-            Editar {item.name}
-          </button>
-          <button disabled={busy} onClick={onRemove}>
-            Remover {item.name}
-          </button>
-          {editing && (
-            <form onSubmit={(e) => void save(e)}>
-              <ItemFields prefix={'edit-' + item.id} item={item} />
-              <button disabled={busy}>Salvar item</button>
-              <button type="button" disabled={busy} onClick={() => setEditing(false)}>
-                Cancelar edição do item
-              </button>
-            </form>
-          )}
-        </>
-      )}
-    </section>
   );
 }
 export function ItemsPanel({
   listId,
   canWrite,
-  onChanged,
+  onSnapshot,
+  onBlocked,
+  onConfirmed,
 }: {
   listId: string;
   canWrite: boolean;
-  onChanged: () => Promise<void>;
+  onSnapshot: (snapshot: ItemSnapshot) => void;
+  onBlocked: (status: number) => void;
+  onConfirmed: () => Promise<void>;
 }) {
   const [rows, setRows] = useState<ItemInfo[]>([]),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const version = useRef(0);
-  const reload = useCallback(async () => {
-    const current = ++version.current;
-    try {
-      const data = await itemApi.collection(listId);
-      if (current === version.current) {
-        setRows(data);
-        setError('');
-      }
-      return true;
-    } catch (e) {
-      if (current === version.current) {
-        setError(e instanceof Error ? e.message : 'Não foi possível carregar os itens.');
-        if (e instanceof ApiError && [401, 403, 404].includes(e.status)) setRows([]);
-      }
-      return false;
-    }
-  }, [listId]);
+    [newDraft, setNewDraft] = useState<Draft>(empty),
+    [editor, setEditor] = useState<{ id: string; baseVersion: number; draft: Draft } | null>(null),
+    [error, setError] = useState(''),
+    [stale, setStale] = useState('');
+  const feed = useRef<ReturnType<typeof createItemFeed<ItemSnapshot>> | null>(null),
+    callbacks = useRef({ onSnapshot, onBlocked, onConfirmed }),
+    lastRead = useRef(0);
   useEffect(() => {
-    const requests = version;
-    void Promise.resolve().then(reload);
-    const check = () => {
-      if (document.visibilityState === 'visible') void reload();
-    };
-    window.addEventListener('focus', check);
-    document.addEventListener('visibilitychange', check);
-    return () => {
-      requests.current++;
-      window.removeEventListener('focus', check);
-      document.removeEventListener('visibilitychange', check);
-    };
-  }, [reload]);
-  async function act(operation: () => Promise<unknown>) {
-    if (busy) return false;
-    setBusy(true);
-    setError('');
-    try {
-      await operation();
-      await reload();
-      await onChanged();
-      return true;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível confirmar o salvamento.');
-      if (e instanceof ApiError && [401, 403, 404].includes(e.status)) {
-        await reload();
-        await onChanged();
-      }
-      return false;
-    } finally {
-      setBusy(false);
-    }
+    callbacks.current = { onSnapshot, onBlocked, onConfirmed };
+  }, [onSnapshot, onBlocked, onConfirmed]);
+  const command = useConfirmation(failure);
+  function failure(e: unknown) {
+    setError(e instanceof Error ? e.message : 'Não foi possível confirmar o salvamento.');
+    if (e instanceof ApiError && e.status === 401) block(e.status);
+    else if (e instanceof ApiError && [403, 404, 409].includes(e.status))
+      void feed.current?.refresh(true);
   }
-  async function add(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    await act(async () => {
-      await itemApi.create(listId, inputFrom(form));
-      form.reset();
+  function block(status: number) {
+    feed.current?.stop();
+    command.reset();
+    setRows([]);
+    setEditor(null);
+    setNewDraft(empty());
+    callbacks.current.onBlocked(status);
+  }
+  useEffect(() => {
+    const controller = createItemFeed({
+      load: () => itemApi.snapshot(listId),
+      visible: () => document.visibilityState === 'visible',
+      onValue: (snapshot: ItemSnapshot) => {
+        lastRead.current++;
+        setRows(snapshot.items);
+        setStale('');
+        callbacks.current.onSnapshot(snapshot);
+      },
+      onError: () =>
+        setStale(
+          'Não foi possível atualizar. Os dados podem estar desatualizados; seu preenchimento foi preservado.',
+        ),
+      onBlocked: (status) => block(status),
     });
+    feed.current = controller;
+    const confirmation = command;
+    controller.start();
+    const visible = () => void controller.visibilityChanged();
+    window.addEventListener('focus', visible);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      controller.stop();
+      confirmation.dispose();
+      window.removeEventListener('focus', visible);
+      document.removeEventListener('visibilitychange', visible);
+    };
+    // O controlador pertence somente a esta lista; callbacks usam referências atuais.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listId]);
+  const disabled = command.busy || Boolean(command.pending) || !canWrite;
+  const current = editor ? rows.find((r) => r.id === editor.id) : undefined,
+    changed = Boolean(editor && current && current.version !== editor.baseVersion);
+  async function confirmed() {
+    setError('');
+    const reading = feed.current?.refresh(true);
+    await callbacks.current.onConfirmed();
+    await reading;
+  }
+  async function check() {
+    const before = lastRead.current;
+    await feed.current?.refresh(true);
+    if (lastRead.current === before)
+      throw new Error('Atualização não confirmada. Tente novamente.');
+  }
+  function add(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (disabled) return;
+    void command.execute(
+      prepareCommand('/lists/' + listId + '/items', 'POST', payload(newDraft)),
+      async () => {
+        setNewDraft(empty());
+        await confirmed();
+      },
+    );
+  }
+  function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (disabled || !editor || !current || changed) return;
+    void command.execute(
+      prepareCommand('/lists/' + listId + '/items/' + editor.id, 'PATCH', {
+        ...payload(editor.draft),
+        expectedVersion: editor.baseVersion,
+      }),
+      async () => {
+        setEditor(null);
+        await confirmed();
+      },
+    );
+  }
+  function mutate(item: ItemInfo, remove = false) {
+    if (disabled) return;
+    void command.execute(
+      prepareCommand(
+        '/lists/' + listId + '/items/' + item.id + (remove ? '' : '/purchased'),
+        remove ? 'DELETE' : 'PUT',
+        { expectedVersion: item.version, ...(remove ? {} : { purchased: !item.purchased }) },
+      ),
+      confirmed,
+    );
   }
   return (
     <section aria-label="Itens da lista">
       <h5>Itens da lista</h5>
       <p>{progressLabel(rows.length, rows.filter((r) => r.purchased).length)}</p>
+      {stale && <p role="status">{stale}</p>}
       {error && <p role="alert">{error}</p>}
-      <button disabled={busy} onClick={() => void reload()}>
-        Atualizar itens
-      </button>
-      {canWrite && (
-        <form onSubmit={(e) => void add(e)}>
-          <ItemFields prefix="new-item" />
-          <p>
-            Quantidade opcional, até 999999,999 e três casas decimais. Unidade e quantidade são
-            independentes.
-          </p>
-          <button disabled={busy}>Adicionar item</button>
+      <PendingNotice state={command} canWrite={canWrite} onCheck={check} />
+      <button onClick={() => void feed.current?.refresh()}>Atualizar itens</button>
+      {(canWrite || Object.values(newDraft).some(Boolean) || command.pending) && (
+        <form onSubmit={add}>
+          <fieldset disabled={disabled}>
+            <Fields prefix="new-item" values={newDraft} onChange={setNewDraft} />
+            <p>
+              Quantidade opcional, até 999999,999 e três casas decimais. Unidade e quantidade são
+              independentes.
+            </p>
+            <button>Adicionar item</button>
+          </fieldset>
         </form>
       )}
-      {[false, true].map((purchased) => (
+      {editor && (
+        <section aria-label="Edição do item">
+          <h6>Editar {editor.draft.name}</h6>
+          {!current ? (
+            <p role="alert">
+              Item indisponível. O preenchimento pode ser descartado, mas não sobrescrito.
+            </p>
+          ) : changed ? (
+            <section aria-label="Versão atual do item">
+              <p>Este item mudou em outra sessão. Compare os dados atuais com seu preenchimento.</p>
+              <p>
+                {current.name} — {current.quantity} {current.unit}
+              </p>
+              <p>{current.notes}</p>
+              <button
+                disabled={disabled}
+                onClick={() => {
+                  setEditor({ ...editor, baseVersion: current.version });
+                  setError('');
+                }}
+              >
+                Usar versão atual após revisão
+              </button>
+            </section>
+          ) : null}
+          <form onSubmit={save}>
+            <fieldset disabled={disabled}>
+              <Fields
+                prefix={'edit-' + editor.id}
+                values={editor.draft}
+                edit
+                onChange={(draft) => setEditor({ ...editor, draft })}
+              />
+              <button disabled={!current || changed}>Salvar item</button>
+              <button type="button" onClick={() => setEditor(null)}>
+                Descartar rascunho
+              </button>
+            </fieldset>
+          </form>
+        </section>
+      )}
+      {([false, true] as const).map((purchased) => (
         <section key={String(purchased)} aria-label={purchased ? 'Comprados' : 'Pendentes'}>
           <h6>{purchased ? 'Comprados' : 'Pendentes'}</h6>
           <ul>
@@ -200,16 +254,37 @@ export function ItemsPanel({
               .filter((r) => r.purchased === purchased)
               .map((r) => (
                 <li key={r.id}>
-                  <ItemRow
-                    item={r}
-                    canWrite={canWrite}
-                    busy={busy}
-                    onSave={(input) => act(() => itemApi.update(listId, r.id, input))}
-                    onPurchased={() =>
-                      void act(() => itemApi.purchased(listId, r.id, !r.purchased))
-                    }
-                    onRemove={() => void act(() => itemApi.remove(listId, r.id))}
-                  />
+                  <section aria-label={'Item ' + r.name}>
+                    <h6>{r.name}</h6>
+                    {(r.quantity !== null || r.unit !== null) && (
+                      <p>
+                        {r.quantity?.replace('.', ',')} {r.unit}
+                      </p>
+                    )}
+                    {r.notes && <p className="list-description">{r.notes}</p>}
+                    {canWrite && (
+                      <>
+                        <button
+                          disabled={disabled}
+                          aria-pressed={r.purchased}
+                          onClick={() => mutate(r)}
+                        >
+                          {r.purchased ? 'Desmarcar' : 'Marcar comprado'}: {r.name}
+                        </button>
+                        <button
+                          disabled={disabled}
+                          onClick={() =>
+                            setEditor({ id: r.id, baseVersion: r.version, draft: draftOf(r) })
+                          }
+                        >
+                          Editar {r.name}
+                        </button>
+                        <button disabled={disabled} onClick={() => mutate(r, true)}>
+                          Remover {r.name}
+                        </button>
+                      </>
+                    )}
+                  </section>
                 </li>
               ))}
           </ul>

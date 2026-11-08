@@ -1,3 +1,4 @@
+import { confirm, receiptMaintenance } from './receipts.js';
 import { randomUUID } from 'node:crypto';
 import { residenceCandidates, type PlatformAccessOptions } from '../platform/public.js';
 import { AuthError } from '../platform/public.js';
@@ -12,6 +13,7 @@ import { listFields } from './policies.js';
 export function createKitandaService(options: PlatformAccessOptions) {
   const { scope, run } = createListAccess(options);
   return {
+    ...receiptMaintenance(options),
     collection: (headers: Headers, residenceId: string) =>
       scope(headers, residenceId, null, async (c, a) => {
         const rows = (
@@ -33,17 +35,26 @@ export function createKitandaService(options: PlatformAccessOptions) {
       headers: Headers,
       residenceId: string,
       input: { name: string; description?: string },
+      key: string,
     ) =>
       scope(headers, residenceId, null, async (c, a) => {
         if (a.role === 'viewer') throw listForbidden();
         const fields = listFields(input);
-        const row = (
-          await c.query<ListRow>(
-            'insert into kitanda.lists(id,"residenceId","creatorId",name,description) values($1,$2,$3,$4,$5) returning *',
-            [randomUUID(), residenceId, a.userId, fields.name, fields.description ?? null],
-          )
-        ).rows[0]!;
-        return listInfo(row, a);
+        const payload = { name: fields.name, description: fields.description ?? null };
+        return confirm(
+          c,
+          { userId: a.userId, action: 'list.create', parentId: residenceId, key },
+          payload,
+          async () => {
+            const id = randomUUID();
+            await c.query(
+              'insert into kitanda.lists(id,"residenceId","creatorId",name,description) values($1,$2,$3,$4,$5)',
+              [id, residenceId, a.userId, payload.name, payload.description],
+            );
+            return { resourceId: id };
+          },
+          options.now ?? Date.now,
+        );
       }),
     detail: (h: Headers, id: string) => run(h, id, 'read', async (_c, a, r) => listInfo(r, a)),
     update: (h: Headers, id: string, input: { name?: string; description?: string }) =>

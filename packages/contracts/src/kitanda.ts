@@ -59,10 +59,17 @@ const itemFields = {
 };
 export const ItemCreateSchema = Type.Object(itemFields, strict);
 export const ItemUpdateSchema = Type.Object(
-  { ...itemFields, name: Type.Optional(itemFields.name) },
-  { ...strict, minProperties: 1 },
+  {
+    ...itemFields,
+    name: Type.Optional(itemFields.name),
+    expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }),
+  },
+  { ...strict, minProperties: 2 },
 );
-export const ItemPurchasedSchema = Type.Object({ purchased: Type.Boolean() }, strict);
+export const ItemPurchasedSchema = Type.Object(
+  { purchased: Type.Boolean(), expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }) },
+  strict,
+);
 export const ItemInfoSchema = Type.Object(
   {
     id: Type.String({ format: 'uuid' }),
@@ -72,6 +79,7 @@ export const ItemInfoSchema = Type.Object(
     unit: Type.Union([Type.String(), Type.Null()]),
     notes: Type.Union([Type.String(), Type.Null()]),
     purchased: Type.Boolean(),
+    version: Type.Integer({ minimum: 1 }),
     createdAt: Type.String({ format: 'date-time' }),
     updatedAt: Type.String({ format: 'date-time' }),
   },
@@ -80,3 +88,27 @@ export const ItemInfoSchema = Type.Object(
 export type ItemInfo = Static<typeof ItemInfoSchema>;
 export type ItemCreate = Static<typeof ItemCreateSchema>;
 export type ItemUpdate = Static<typeof ItemUpdateSchema>;
+
+export const IdempotencyHeadersSchema = Type.Object(
+  { 'idempotency-key': Type.String({ format: 'uuid' }) },
+  { additionalProperties: true },
+);
+export const MutationReceiptSchema = Type.Object(
+  { confirmed: Type.Literal(true), resourceId: Type.String({ format: 'uuid' }) },
+  strict,
+);
+export const ItemReceiptSchema = Type.Object(
+  { ...MutationReceiptSchema.properties, version: Type.Integer({ minimum: 1 }) },
+  strict,
+);
+export const ItemRemoveSchema = Type.Object(
+  { expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }) },
+  strict,
+);
+export const ItemSnapshotSchema = Type.Object(
+  { list: ListInfoSchema, items: Type.Array(ItemInfoSchema) },
+  strict,
+);
+export type ItemSnapshot = Static<typeof ItemSnapshotSchema>;
+export type MutationReceipt = Static<typeof MutationReceiptSchema>;
+export type ItemReceipt = Static<typeof ItemReceiptSchema>;

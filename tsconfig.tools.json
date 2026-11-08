@@ -14,6 +14,7 @@
     "playwright.invitations.config.ts",
     "playwright.recovery.config.ts",
     "playwright.kitanda.config.ts",
-    "playwright.items.config.ts"
+    "playwright.items.config.ts",
+    "playwright.collaboration.config.ts"
   ]
 }

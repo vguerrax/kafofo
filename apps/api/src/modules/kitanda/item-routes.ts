@@ -20,7 +20,7 @@ export function itemRoutes(
         throw new AuthError(403, 'UNTRUSTED_ORIGIN', 'Origem da requisição não permitida.');
     });
     const errors = Object.fromEntries(
-      [400, 401, 403, 404, 503].map((n) => [n, c.ErrorResponseSchema]),
+      [400, 401, 403, 404, 409, 503].map((n) => [n, c.ErrorResponseSchema]),
     );
     const security = [{ sessionCookie: [] }, { secureSessionCookie: [] }],
       tags = ['kitanda'];
@@ -42,10 +42,10 @@ export function itemRoutes(
           tags,
           security,
           params: list,
-          response: { 200: Type.Array(c.ItemInfoSchema), ...errors },
+          response: { 200: c.ItemSnapshotSchema, ...errors },
         },
       },
-      (req) => service!.collection(h(req.headers.cookie), req.params.listId),
+      (req) => service!.snapshot(h(req.headers.cookie), req.params.listId),
     );
     app.post(
       '/lists/:listId/items',
@@ -56,14 +56,22 @@ export function itemRoutes(
           tags,
           security,
           params: list,
+          headers: c.IdempotencyHeadersSchema,
           body: c.ItemCreateSchema,
-          response: { 201: c.ItemInfoSchema, ...errors },
+          response: { 201: c.ItemReceiptSchema, ...errors },
         },
       },
       async (req, reply) =>
         reply
           .code(201)
-          .send(await service!.create(h(req.headers.cookie), req.params.listId, req.body)),
+          .send(
+            await service!.create(
+              h(req.headers.cookie),
+              req.params.listId,
+              req.body,
+              req.headers['idempotency-key'],
+            ),
+          ),
     );
     app.patch(
       '/lists/:listId/items/:itemId',
@@ -74,27 +82,56 @@ export function itemRoutes(
           tags,
           security,
           params: item,
+          headers: c.IdempotencyHeadersSchema,
           body: c.ItemUpdateSchema,
-          response: { 200: c.ItemInfoSchema, ...errors },
+          response: { 200: c.ItemReceiptSchema, ...errors },
         },
       },
       (req) =>
-        service!.update(h(req.headers.cookie), req.params.listId, req.params.itemId, req.body),
+        service!.update(
+          h(req.headers.cookie),
+          req.params.listId,
+          req.params.itemId,
+          req.body,
+          req.headers['idempotency-key'],
+        ),
     );
     app.delete(
       '/lists/:listId/items/:itemId',
       {
         schema: {
           operationId: 'removeItem',
+          headers: c.IdempotencyHeadersSchema,
+          body: c.ItemRemoveSchema,
           summary: 'Remover item logicamente',
           tags,
           security,
           params: item,
-          response: { 204: { type: 'null' }, ...errors },
+          response: {
+            204: {
+              type: 'null',
+              headers: {
+                'X-Resource-Id': { type: 'string', format: 'uuid' },
+                'X-Item-Version': { type: 'integer', minimum: 1 },
+              },
+              description:
+                'Confirmação; X-Resource-Id identifica o recurso e X-Item-Version informa a versão confirmada.',
+            },
+            ...errors,
+          },
         },
       },
       async (req, reply) => {
-        await service!.remove(h(req.headers.cookie), req.params.listId, req.params.itemId);
+        const receipt = await service!.remove(
+          h(req.headers.cookie),
+          req.params.listId,
+          req.params.itemId,
+          req.body.expectedVersion,
+          req.headers['idempotency-key'],
+        );
+        reply
+          .header('X-Resource-Id', receipt.resourceId)
+          .header('X-Item-Version', String(receipt.version));
         return reply.code(204).send(null);
       },
     );
@@ -107,8 +144,9 @@ export function itemRoutes(
           tags,
           security,
           params: item,
+          headers: c.IdempotencyHeadersSchema,
           body: c.ItemPurchasedSchema,
-          response: { 200: c.ItemInfoSchema, ...errors },
+          response: { 200: c.ItemReceiptSchema, ...errors },
         },
       },
       (req) =>
@@ -117,6 +155,8 @@ export function itemRoutes(
           req.params.listId,
           req.params.itemId,
           req.body.purchased,
+          req.body.expectedVersion,
+          req.headers['idempotency-key'],
         ),
     );
   };

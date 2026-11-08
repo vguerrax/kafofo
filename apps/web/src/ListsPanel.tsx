@@ -1,3 +1,7 @@
+import { prepareCommand } from './kitanda-api';
+import { useConfirmation } from './use-confirmation';
+import { PendingNotice } from './PendingNotice';
+import type { ItemSnapshot } from '@kafofo/contracts';
 import { ItemsPanel } from './ItemsPanel';
 import { progressLabel } from './item-format';
 import { contextApi } from './context-api';
@@ -5,7 +9,15 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import type { ListInfo, ListCard, ListShare, ShareCandidate } from '@kafofo/contracts';
 import { kitandaApi } from './kitanda-api';
 import { ApiError } from './api';
-export function ListsPanel({ residenceId, role }: { residenceId: string; role: string }) {
+export function ListsPanel({
+  residenceId,
+  role,
+  onUnauthenticated,
+}: {
+  residenceId: string;
+  role: string;
+  onUnauthenticated: () => void;
+}) {
   const [rows, setRows] = useState<ListCard[]>([]),
     [selected, setSelected] = useState(''),
     [detail, setDetail] = useState<ListInfo | null>(null),
@@ -14,10 +26,28 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [notice, setNotice] = useState('');
+  const [newDraft, setNewDraft] = useState({ name: '', description: '' }),
+    [metadataOpen, setMetadataOpen] = useState(false);
+  const blocked = useRef(new Set<string>());
+  const creation = useConfirmation(failure);
+  const creationLifetime = useRef(creation),
+    catalogRead = useRef(0);
+  useEffect(() => {
+    const confirmation = creationLifetime.current;
+    return () => confirmation.dispose();
+  }, []);
   const [canCreate, setCanCreate] = useState(role !== 'viewer');
   const version = useRef(0),
     heading = useRef<HTMLHeadingElement>(null);
   function failure(e: unknown) {
+    if (e instanceof ApiError && e.status === 401) {
+      setRows([]);
+      setDetail(null);
+      setNewDraft({ name: '', description: '' });
+      creation.reset();
+      onUnauthenticated();
+      return;
+    }
     setError(e instanceof Error ? e.message : 'Não foi possível concluir. Tente novamente.');
     if (e instanceof ApiError && [401, 403, 404].includes(e.status)) {
       setDetail(null);
@@ -25,6 +55,10 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       setCandidates([]);
     }
   }
+  const failureRef = useRef(failure);
+  useEffect(() => {
+    failureRef.current = failure;
+  });
   const refresh = useCallback(async () => {
     const current = ++version.current;
     let collectionLoaded = false;
@@ -43,9 +77,10 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       }
       const lists = await kitandaApi.collection(residenceId);
       if (current !== version.current) return;
-      setRows(lists);
+      setRows(lists.filter((r) => !blocked.current.has(r.id)));
       collectionLoaded = true;
-      if (!selected) {
+      catalogRead.current++;
+      if (!selected || blocked.current.has(selected)) {
         setDetail(null);
         setShares([]);
         setCandidates([]);
@@ -55,6 +90,7 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       const list = await kitandaApi.detail(selected);
       if (current !== version.current) return;
       setDetail(list);
+      if (list.canWrite) setMetadataOpen(true);
       if (!list.canManageShares) {
         setShares([]);
         setCandidates([]);
@@ -71,14 +107,14 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       setError('');
     } catch (e) {
       if (current === version.current) {
-        failure(e);
+        failureRef.current(e);
         if (!collectionLoaded && e instanceof ApiError && [401, 403, 404].includes(e.status)) {
           setRows([]);
           setCanCreate(false);
         }
       }
     }
-  }, [residenceId, selected]);
+  }, [residenceId, selected, setCanCreate]);
   useEffect(() => {
     const requests = version;
     void Promise.resolve().then(refresh);
@@ -117,17 +153,64 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
     const form = event.currentTarget,
       fields = new FormData(form),
       input = { name: String(fields.get('name')), description: String(fields.get('description')) };
-    void act(
-      async () => {
-        if (create) {
-          const list = await kitandaApi.create(residenceId, input);
-          setSelected(list.id);
-          form.reset();
-        } else if (detail) await kitandaApi.update(detail.id, input);
-      },
-      create ? 'Lista criada. Somente você tem acesso inicialmente.' : 'Lista salva.',
-    );
+    if (create) {
+      if (!canCreate || creation.pending || creation.busy) return;
+      void creation.execute(
+        prepareCommand('/residences/' + residenceId + '/lists', 'POST', newDraft, false),
+        async (receipt) => {
+          setNewDraft({ name: '', description: '' });
+          setDetail(null);
+          setSelected(receipt.resourceId);
+          setNotice('Lista criada. Somente você tem acesso inicialmente.');
+          await refresh();
+        },
+      );
+    } else
+      void act(async () => {
+        if (detail) await kitandaApi.update(detail.id, input);
+      }, 'Lista salva.');
   }
+  function snapshot(value: ItemSnapshot) {
+    if (blocked.current.has(value.list.id)) return;
+    if (!value.list.canWrite) version.current++;
+    setCanCreate(value.list.canWrite);
+    setDetail(value.list);
+    if (value.list.canWrite) setMetadataOpen(true);
+    setRows((current) =>
+      current.map((r) =>
+        r.id === value.list.id
+          ? {
+              ...r,
+              ...value.list,
+              totalActive: value.items.length,
+              totalPurchased: value.items.filter((i) => i.purchased).length,
+            }
+          : r,
+      ),
+    );
+    if (!value.list.canManageShares) {
+      setShares([]);
+      setCandidates([]);
+    }
+  }
+  function loseAccess(status: number) {
+    version.current++;
+    if (selected) blocked.current.add(selected);
+    setDetail(null);
+    setSelected('');
+    setMetadataOpen(false);
+    setShares([]);
+    setCandidates([]);
+    setRows((current) => current.filter((r) => !blocked.current.has(r.id)));
+    setError('Seu acesso à lista foi encerrado.');
+    if (status === 401) {
+      creation.reset();
+      setNewDraft({ name: '', description: '' });
+      setRows([]);
+      onUnauthenticated();
+    }
+  }
+
   return (
     <section className="lists-panel" aria-label="Listas da residência">
       <h3>Listas da residência</h3>
@@ -136,13 +219,38 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       <button disabled={busy} onClick={() => void refresh()}>
         Atualizar listas
       </button>
-      {canCreate && (
+      <PendingNotice
+        state={creation}
+        canWrite={canCreate}
+        onCheck={async () => {
+          const before = catalogRead.current;
+          await refresh();
+          if (catalogRead.current === before)
+            throw new Error('Atualização não confirmada. Tente novamente.');
+        }}
+      />
+      {(canCreate || Boolean(newDraft.name || newDraft.description) || creation.pending) && (
         <form onSubmit={(e) => submit(e, true)}>
-          <label htmlFor="list-create-name">Nome da nova lista</label>
-          <input id="list-create-name" name="name" required maxLength={1024} />
-          <label htmlFor="list-create-description">Descrição da nova lista</label>
-          <textarea id="list-create-description" name="description" maxLength={8192} />
-          <button disabled={busy}>Criar lista</button>
+          <fieldset disabled={!canCreate || creation.busy || Boolean(creation.pending)}>
+            <label htmlFor="list-create-name">Nome da nova lista</label>
+            <input
+              id="list-create-name"
+              name="name"
+              value={newDraft.name}
+              onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })}
+              required
+              maxLength={1024}
+            />
+            <label htmlFor="list-create-description">Descrição da nova lista</label>
+            <textarea
+              id="list-create-description"
+              name="description"
+              value={newDraft.description}
+              onChange={(e) => setNewDraft({ ...newDraft, description: e.target.value })}
+              maxLength={8192}
+            />
+            <button disabled={busy}>Criar lista</button>
+          </fieldset>
         </form>
       )}
       {rows.length === 0 && <p>Nenhuma lista acessível nesta residência.</p>}
@@ -157,6 +265,7 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
                 onClick={() => {
                   setSelected(r.id);
                   setDetail(null);
+                  setMetadataOpen(false);
                 }}
               >
                 Abrir {r.name}
@@ -171,31 +280,35 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
             {detail.name}
           </h4>
           {detail.description && <p className="list-description">{detail.description}</p>}
-          {detail.canWrite && (
+          {(detail.canWrite || metadataOpen) && (
             <form key={detail.id} onSubmit={(e) => submit(e, false)}>
-              <label htmlFor="list-edit-name">Nome da lista</label>
-              <input
-                id="list-edit-name"
-                name="name"
-                defaultValue={detail.name}
-                required
-                maxLength={1024}
-              />
-              <label htmlFor="list-edit-description">Descrição da lista</label>
-              <textarea
-                id="list-edit-description"
-                name="description"
-                defaultValue={detail.description ?? ''}
-                maxLength={8192}
-              />
-              <button disabled={busy}>Salvar lista</button>
+              <fieldset disabled={!detail.canWrite}>
+                <label htmlFor="list-edit-name">Nome da lista</label>
+                <input
+                  id="list-edit-name"
+                  name="name"
+                  defaultValue={detail.name}
+                  required
+                  maxLength={1024}
+                />
+                <label htmlFor="list-edit-description">Descrição da lista</label>
+                <textarea
+                  id="list-edit-description"
+                  name="description"
+                  defaultValue={detail.description ?? ''}
+                  maxLength={8192}
+                />
+                <button disabled={busy}>Salvar lista</button>
+              </fieldset>
             </form>
           )}
           <ItemsPanel
             key={'items-' + detail.id}
             listId={detail.id}
             canWrite={detail.canWrite}
-            onChanged={refresh}
+            onSnapshot={snapshot}
+            onBlocked={loseAccess}
+            onConfirmed={refresh}
           />
           {detail.canManageShares && (
             <section aria-label="Compartilhamentos da lista">

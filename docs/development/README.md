@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; a #11 acrescenta metadados e compartilhamento de listas de residência; a #12 acrescenta itens e progresso; histórico e demais capacidades permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; a #11 acrescenta metadados e compartilhamento de listas de residência; a #12 acrescenta itens e progresso; a #13 acrescenta colaboração e conflitos; histórico e demais capacidades permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -269,3 +269,21 @@ pnpm test:items:e2e
 A suíte de itens usa 4412/5412, reutiliza a fixture e o banco descartável do Kitanda e limpa os dados ao preparar o percurso. Não execute essas suítes simultaneamente contra o mesmo banco nem use dados reais. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo ficam desabilitadas. Não executar builds/instalações junto ao navegador.
 
 Os percursos cobrem vírgula/ponto, grupos, edição, remoção, percentual, celular, teclado, preservação de formulário após erro e visualizador sem escrita. Repetição automática de criação, conflitos e polling ficam na #13; limpeza/lixeira na #14; histórico/auditoria na #15, cuja integração é requisito antes da publicação das operações com histórico.
+
+## Colaboração, conflitos e confirmação
+
+A [#13](https://github.com/vguerrax/kafofo/issues/13) usa a migração `0007`, aplicada explicitamente por `pnpm db:migrate`. Itens existentes recebem versão 1; comprovantes operacionais têm retenção de 24 horas. A API limpa expirados ao iniciar e a cada minuto, sem sobreposição, até 500 por lote. Encerra a limpeza antes de fechar o banco.
+
+Criação de lista e mutações de itens exigem cabeçalho `Idempotency-Key` UUID. PATCH de item, PUT de compra e DELETE enviam `expectedVersion`; DELETE tem corpo JSON com esse campo. As confirmações devolvem somente identificador e versão confirmada, sem conteúdo anterior. DELETE preserva 204 e informa `X-Resource-Id`/`X-Item-Version`. GET dos itens retorna `{list, items}` com permissões atuais. Consulte schemas no OpenAPI; clientes anteriores precisam acompanhar esses contratos.
+
+Com a lista aberta e visível, a tela atualiza a cada cinco segundos. Aba oculta suspende consultas periódicas; retorno consulta imediatamente. Atualizações preservam rascunho e foco. Conflito mantém o que foi digitado, permite comparar os valores atuais e exige revisão explícita antes de novo envio. Itens removidos não podem ser sobrescritos. Perda de acesso encerra consultas e retira os dados; visualizador continua lendo, sem escrever.
+
+Em gravação sem confirmação, use “Tentar confirmar novamente”: a página reutiliza o mesmo payload e chave. Não altere a operação pendente nem recarregue antes de esclarecer o resultado. Após 24 horas, atualize e confira o que foi confirmado antes de liberar uma nova operação. Rascunhos e chaves pendentes existem só na memória da página; não há fila offline ou recuperação após recarga.
+
+A integração `pnpm --filter @kafofo/api test:kitanda` inclui conflitos e comprovantes no banco descartável exclusivo. Navegador adicional:
+
+```bash
+pnpm test:collaboration:e2e
+```
+
+Usa `KITANDA_TEST_DATABASE_URL`, fixture do Kitanda e portas 4413/5413. Execute sequencialmente com as suítes de listas/itens, sem dados reais e sem builds/instalações simultâneos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo permanecem desabilitadas. Os testes incluem duas sessões, cadência/pausa, revisão, foco, resposta perdida após commit, repetição e revogação. `pnpm check` inclui testes do coordenador de consultas. Limpeza de comprados e histórico consultável continuam nas #14/#15.
