@@ -4,6 +4,7 @@ import { authAdapter } from '../auth/adapter.js';
 import type { AuthConfig } from '../auth/config.js';
 import { createTransactions } from '../auth/transaction.js';
 import { AuthError, unauthenticated } from '../auth/policies.js';
+import { recordSecurity } from '../audit/record.js';
 import {
   contextName,
   canManageAccess,
@@ -135,11 +136,20 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
     const valid = contextName(name);
     return run(headers, null, null, async (c, id) => {
       const core = { id: randomUUID(), name: valid };
+      const membershipId = randomUUID();
       await c.query('insert into platform.cores(id,name) values($1,$2)', [core.id, core.name]);
       await c.query(
         'insert into platform.core_memberships(id,"coreId","userId",role) values($1,$2,$3,\'admin\')',
-        [randomUUID(), core.id, id],
+        [membershipId, core.id, id],
       );
+      await recordSecurity(c, {
+        action: 'membership.created',
+        actorId: id,
+        targetId: id,
+        coreId: core.id,
+        membershipId,
+        nextRole: 'admin',
+      });
       return coreInfo({ ...core, role: 'admin' });
     });
   }
@@ -149,12 +159,13 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
     input: { name: string; responsibleUserId: string },
   ) {
     const name = contextName(input.name);
-    return run(headers, coreId, null, async (c, _id, m) => {
+    return run(headers, coreId, null, async (c, actor, m) => {
       if (m!.role !== 'admin') throw forbidden();
       const target = await membership(c, coreId, input.responsibleUserId);
       if (!target)
         throw new AuthError(400, 'INVALID_MEMBER', 'Escolha um membro ativo deste núcleo.');
       const r = { id: randomUUID(), coreId, name };
+      const residenceAccessId = randomUUID();
       await c.query('insert into platform.residences(id,"coreId",name) values($1,$2,$3)', [
         r.id,
         coreId,
@@ -162,8 +173,18 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
       ]);
       await c.query(
         'insert into platform.residence_accesses(id,"coreId","residenceId","membershipId",role) values($1,$2,$3,$4,\'responsible\')',
-        [randomUUID(), coreId, r.id, target.id],
+        [residenceAccessId, coreId, r.id, target.id],
       );
+      await recordSecurity(c, {
+        action: 'residence-access.created',
+        actorId: actor,
+        targetId: target.userId,
+        coreId,
+        residenceId: r.id,
+        membershipId: target.id,
+        residenceAccessId,
+        nextRole: 'responsible',
+      });
       return r;
     });
   }
@@ -220,7 +241,7 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
     userId: string,
     next: ResidenceRole | null,
   ) {
-    return run(headers, null, id, async (c, _user, m, r) => {
+    return run(headers, null, id, async (c, actor, m, r) => {
       const target = await membership(c, r!.coreId, userId);
       if (!target)
         throw new AuthError(400, 'INVALID_MEMBER', 'Escolha um membro ativo deste núcleo.');
@@ -235,6 +256,8 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
         )
       )
         throw forbidden();
+      if ((!current && !next) || current?.role === next) return;
+      const residenceAccessId = current?.id ?? randomUUID();
       if (current) {
         if (next)
           await c.query(
@@ -249,8 +272,23 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
       } else if (next)
         await c.query(
           'insert into platform.residence_accesses(id,"coreId","residenceId","membershipId",role) values($1,$2,$3,$4,$5)',
-          [randomUUID(), r!.coreId, id, target.id, next],
+          [residenceAccessId, r!.coreId, id, target.id, next],
         );
+      await recordSecurity(c, {
+        action: !next
+          ? 'residence-access.revoked'
+          : current
+            ? 'residence-access.role-changed'
+            : 'residence-access.created',
+        actorId: actor,
+        targetId: userId,
+        coreId: r!.coreId,
+        residenceId: id,
+        membershipId: target.id,
+        residenceAccessId,
+        ...(current ? { previousRole: current.role } : {}),
+        ...(next ? { nextRole: next } : {}),
+      });
     });
   }
   async function changeMember(
@@ -273,21 +311,42 @@ export function createContextService(options: AuthConfig & { pool: pg.Pool; now?
         if (total === 1)
           throw new AuthError(409, 'LAST_ADMIN', 'O núcleo precisa manter um administrador ativo.');
       }
+      if (target.role === next) return;
       if (next)
         await c.query(
           'update platform.core_memberships set role=$2,"updatedAt"=now() where id=$1',
           [target.id, next],
         );
       else {
-        await c.query(
-          'update platform.residence_accesses set "revokedAt"=now(),"updatedAt"=now() where "membershipId"=$1 and "revokedAt" is null',
+        const revoked = await c.query<{ id: string; residenceId: string; role: ResidenceRole }>(
+          'update platform.residence_accesses set "revokedAt"=now(),"updatedAt"=now() where "membershipId"=$1 and "revokedAt" is null returning id,"residenceId",role',
           [target.id],
         );
+        for (const access of revoked.rows)
+          await recordSecurity(c, {
+            action: 'residence-access.revoked',
+            actorId: actor,
+            targetId: userId,
+            coreId,
+            residenceId: access.residenceId,
+            membershipId: target.id,
+            residenceAccessId: access.id,
+            previousRole: access.role,
+          });
         await c.query(
           'update platform.core_memberships set "revokedAt"=now(),"updatedAt"=now() where id=$1',
           [target.id],
         );
       }
+      await recordSecurity(c, {
+        action: next ? 'membership.role-changed' : 'membership.revoked',
+        actorId: actor,
+        targetId: userId,
+        coreId,
+        membershipId: target.id,
+        previousRole: target.role,
+        ...(next ? { nextRole: next } : {}),
+      });
     });
   }
   return {

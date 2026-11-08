@@ -16,6 +16,7 @@
     "playwright.kitanda.config.ts",
     "playwright.items.config.ts",
     "playwright.collaboration.config.ts",
-    "playwright.lifecycle.config.ts"
+    "playwright.lifecycle.config.ts",
+    "playwright.history.config.ts"
   ]
 }

@@ -11,6 +11,7 @@ import {
 import { createTransactions } from '../auth/transaction.js';
 import { consumeOrigin } from '../auth/limits.js';
 import { forbidden, notFound } from '../contexts/policies.js';
+import { recordSecurity } from '../audit/record.js';
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const unavailable = () => new AuthError(404, 'INVITATION_UNAVAILABLE', 'Convite indisponível.');
 interface Invitation {
@@ -104,14 +105,31 @@ export function createInvitationService(
         )
       ).rowCount;
       if (existing) return { coreId: i.coreId, alreadyMember: true };
+      const membershipId = randomUUID();
       await c.query(
         'insert into platform.core_memberships(id,"coreId","userId",role) values($1,$2,$3,\'member\')',
-        [randomUUID(), i.coreId, userId],
+        [membershipId, i.coreId, userId],
       );
       await c.query('update platform.invitations set "consumedAt"=$2 where id=$1', [
         i.id,
         new Date(now()),
       ]);
+      await recordSecurity(c, {
+        action: 'membership.created',
+        actorId: userId,
+        targetId: userId,
+        coreId: i.coreId,
+        membershipId,
+        nextRole: 'member',
+      });
+      await recordSecurity(c, {
+        action: 'invitation.accepted',
+        actorId: userId,
+        targetId: userId,
+        coreId: i.coreId,
+        invitationId: i.id,
+        membershipId,
+      });
       return { coreId: i.coreId, alreadyMember: false };
     });
   }
@@ -138,6 +156,12 @@ export function createInvitationService(
           'insert into platform.invitations(id,"coreId","issuerId",digest,"createdAt","expiresAt") values($1,$2,$3,$4,$5,$6)',
           [id, coreId, userId, digest(token), createdAt, expiresAt],
         );
+        await recordSecurity(c, {
+          action: 'invitation.issued',
+          actorId: userId,
+          coreId,
+          invitationId: id,
+        });
         return {
           id,
           link: options.baseURL + '/#invite=' + token,
@@ -167,7 +191,7 @@ export function createInvitationService(
         }));
       }),
     revoke: (headers: Headers, coreId: string, id: string) =>
-      admin(headers, coreId, async (c) => {
+      admin(headers, coreId, async (c, actor) => {
         await lock(c, 'invitation:' + id);
         const i = (
           await c.query<Invitation>(
@@ -177,11 +201,18 @@ export function createInvitationService(
         ).rows[0];
         if (!i) throw notFound();
         if (i.consumedAt) throw new AuthError(409, 'INVITATION_CONSUMED', 'Convite já utilizado.');
-        if (!i.revokedAt)
+        if (!i.revokedAt) {
           await c.query('update platform.invitations set "revokedAt"=$2 where id=$1', [
             id,
             new Date(now()),
           ]);
+          await recordSecurity(c, {
+            action: 'invitation.revoked',
+            actorId: actor,
+            coreId,
+            invitationId: id,
+          });
+        }
       }),
   };
 }

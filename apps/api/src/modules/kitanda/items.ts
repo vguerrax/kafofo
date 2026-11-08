@@ -4,6 +4,7 @@ import { AuthError, type PlatformAccessOptions } from '../platform/public.js';
 import { createListAccess, listInfo } from './access.js';
 import { canonicalQuantity, itemFields, type ItemInput } from './item-policies.js';
 import { confirm } from './receipts.js';
+import { changes, recordHistory } from './history-record.js';
 interface ItemRow {
   id: string;
   listId: string;
@@ -65,7 +66,7 @@ export function createItemService(options: PlatformAccessOptions) {
       run(h, listId, 'write', async (c, a) => {
         const f = itemFields(input),
           payload = {
-            name: f.name,
+            name: f.name!,
             quantity: f.quantity ?? null,
             unit: f.unit ?? null,
             notes: f.notes ?? null,
@@ -80,6 +81,14 @@ export function createItemService(options: PlatformAccessOptions) {
               'insert into kitanda.items(id,"listId",name,quantity,unit,notes) values($1,$2,$3,$4,$5,$6)',
               [id, listId, payload.name, payload.quantity, payload.unit, payload.notes],
             );
+            await recordHistory(c, {
+              listId,
+              actorId: a.userId,
+              action: 'item.created',
+              targets: [
+                { itemId: id, details: { name: payload.name, changes: changes(null, payload) } },
+              ],
+            });
             return { resourceId: id, version: 1 };
           },
           now,
@@ -122,6 +131,28 @@ export function createItemService(options: PlatformAccessOptions) {
               'update kitanda.items set name=$3,quantity=$4,unit=$5,notes=$6,version=version+1,"updatedAt"=now() where "listId"=$1 and id=$2',
               [listId, itemId, next.name, next.quantity, next.unit, next.notes],
             );
+            await recordHistory(c, {
+              listId,
+              actorId: a.userId,
+              action: 'item.updated',
+              targets: [
+                {
+                  itemId,
+                  details: {
+                    name: next.name,
+                    changes: changes(
+                      {
+                        name: r.name,
+                        quantity: r.quantity === null ? null : canonicalQuantity(r.quantity),
+                        unit: r.unit,
+                        notes: r.notes,
+                      },
+                      next,
+                    ),
+                  },
+                },
+              ],
+            });
             return { resourceId: itemId, version: r.version + 1 };
           },
           now,
@@ -147,6 +178,20 @@ export function createItemService(options: PlatformAccessOptions) {
               'update kitanda.items set purchased=$3,version=version+1,"updatedAt"=now() where "listId"=$1 and id=$2',
               [listId, itemId, purchased],
             );
+            await recordHistory(c, {
+              listId,
+              actorId: a.userId,
+              action: purchased ? 'item.purchased' : 'item.unpurchased',
+              targets: [
+                {
+                  itemId,
+                  details: {
+                    name: r.name,
+                    changes: { purchased: { before: r.purchased, after: purchased } },
+                  },
+                },
+              ],
+            });
             return { resourceId: itemId, version: r.version + 1 };
           },
           now,
@@ -164,6 +209,17 @@ export function createItemService(options: PlatformAccessOptions) {
               'update kitanda.items set "deletedAt"=now(),"updatedAt"=now(),version=version+1 where "listId"=$1 and id=$2',
               [listId, itemId],
             );
+            await recordHistory(c, {
+              listId,
+              actorId: a.userId,
+              action: 'item.removed',
+              targets: [
+                {
+                  itemId,
+                  details: { name: r.name, changes: { deleted: { before: false, after: true } } },
+                },
+              ],
+            });
             return { resourceId: itemId, version: r.version + 1 };
           },
           now,

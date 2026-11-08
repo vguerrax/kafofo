@@ -294,10 +294,40 @@ A [#14](https://github.com/vguerrax/kafofo/issues/14) usa a migração `0008`, a
 
 O expurgo inicia com a API e repete a cada hora. Processa até 50 itens removidos e 50 listas excluídas vencidos por ciclo, em transações independentes. Ignora unidades com lock ocupado e tenta novamente depois; uma falha não descarta o candidato nem impede os demais. O encerramento aguarda a rotina antes de fechar o pool. A fonte de trabalho são os timestamps persistidos; reinício não depende de fila em memória. O prazo usa o relógio do banco, com 720 horas por categoria. Não há expurgo manual pela interface nem restauração individual de item.
 
-`pnpm --filter @kafofo/api test:kitanda` inclui os contratos de ciclo de vida e regressões anteriores em PostgreSQL descartável. Os testes de retenção incluem lote limitado, falha/rollback, duas instâncias, revalidação após lock e retomada. O ponto de integração do histórico usa tabela de contrato exclusiva do teste; o histórico real, sua redação e remoção precisam ser validados com a #15 antes da publicação.
+`pnpm --filter @kafofo/api test:kitanda` inclui os contratos de ciclo de vida e regressões anteriores em PostgreSQL descartável. Os testes de retenção incluem lote limitado, falha/rollback, duas instâncias, revalidação após lock e retomada. O teste original do ponto de integração usa tabela de contrato exclusiva. A #15 acrescenta testes com o histórico real, sua redação e remoção; essa integração precisa estar validada antes da publicação.
 
 ```bash
 pnpm test:lifecycle:e2e
 ```
 
 Usa as portas 4414/5414, `KITANDA_TEST_DATABASE_URL` e a fixture comum do Kitanda. Execute sequencialmente com os demais navegadores no mesmo banco descartável. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS; capturas permanecem desabilitadas. Os percursos exercitam duas sessões, seleção alterada, novos comprados, respostas perdidas, lixeira autorizada, visualizador, revogação, teclado e celular. O CI executa os protocolos HTTP e HTTPS junto às regressões da #13. `pnpm check` inclui o agendador inicial/horário, ausência de sobreposição e drenagem no encerramento.
+
+## Histórico e auditoria
+
+A [#15](https://github.com/vguerrax/kafofo/issues/15) usa a migração `0009`, aplicada explicitamente por `pnpm db:migrate` antes de iniciar a API. Cria `kitanda.history_events`, `kitanda.history_targets` e `platform.security_events`; acrescenta índice de expiração aos eventos de recuperação existentes. Não reescreve migrações nem inventa eventos antigos. Use os [contratos de histórico](../domain/kitanda/alpha-1.md#contrato-técnico-do-histórico) e [auditoria](../domain/platform/alpha-1.md#contrato-técnico-da-auditoria-de-segurança) para os limites de conteúdo, autorização e retenção.
+
+Eventos/alvos confirmam com as mutações e seus comprovantes. Nomes/valores antigos de um item vencido deixam de aparecer em qualquer evento antes mesmo da limpeza física. O expurgo integra a redação real dos alvos e a remoção dos eventos de lista, com rollback conjunto. O mesmo agendador inicial/horário executa limpeza independente de auditoria, até 500 eventos de cada tabela por ciclo, após 2160 horas; erros genéricos indicam nova tentativa posterior, sem registrar conteúdo. Encerra antes do pool. Logs técnicos e backups conservam suas políticas próprias.
+
+Consulta operacional da auditoria exige acesso autorizado ao PostgreSQL; não existe endpoint administrativo novo. Exemplo de campos mínimos (substitua filtros somente conforme a autorização operacional):
+
+```sql
+SELECT id, action, "actorId", "targetId", "coreId", "residenceId", "createdAt"
+FROM platform.security_events
+WHERE "createdAt" > statement_timestamp() - interval '2160 hours'
+ORDER BY "createdAt" DESC, id DESC
+LIMIT 50;
+
+SELECT id, action, actor, target, channel, "createdAt"
+FROM platform.recovery_events
+WHERE "createdAt" > statement_timestamp() - interval '2160 hours'
+ORDER BY "createdAt" DESC, id DESC
+LIMIT 50;
+```
+
+`pnpm --filter @kafofo/api test:kitanda` também executa histórico e auditoria em banco descartável exclusivo. Inclui tipos entregues, no-op/repetição, rollback, paginação com microssegundos, cursor adulterado/de outra lista, visualizador, lixeira, revogação e isolamento. Os testes de expurgo usam o histórico real, com nomes/valores anteriores e alvos independentes do lote; também verificam concorrência, falha/retomada e retenção independente da recuperação, inclusive seu comando local. Execute as regressões de `test:contexts`, `test:invitations` e `test:recovery` em seus bancos descartáveis próprios.
+
+```bash
+pnpm test:history:e2e
+```
+
+Usa portas 4415/5415 e a fixture/banco descartável do Kitanda. Os percursos cobrem detalhes, visualizador, paginação, revogação, lista ativa/lixeira, teclado e celular. Execute sequencialmente com os demais navegadores; sem builds/instalações simultâneos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS. O CI inclui HTTP/HTTPS. A integração não substitui publicação verificada nem os procedimentos de backup da entrega operacional.

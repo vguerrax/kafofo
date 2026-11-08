@@ -84,6 +84,15 @@ export async function residenceCandidates(
   ).rows;
 }
 export { createTransactions } from './auth/transaction.js';
+export { purgeSecurityAudit } from './audit/retention.js';
+export async function accountDisplayNames(c: pg.PoolClient, ids: string[]) {
+  return (
+    await c.query<{ id: string; name: string }>(
+      'select id,name from platform."user" where id=any($1::text[])',
+      [ids],
+    )
+  ).rows;
+}
 
 // Manutenção sem ator: mesma ordem contextual, sem adquirir identidade de usuário.
 // Locks não bloqueantes permitem dividir candidatos entre instâncias.

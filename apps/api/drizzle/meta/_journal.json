@@ -64,6 +64,13 @@
       "when": 1794154250864,
       "tag": "0008_kitanda-lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794156364015,
+      "tag": "0009_history-security-audit",
+      "breakpoints": true
     }
   ]
 }
