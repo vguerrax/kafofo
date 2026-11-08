@@ -1,3 +1,4 @@
+import { createItemService } from './modules/kitanda/items.js';
 import { createKitandaService } from './modules/kitanda/service.js';
 import { createRecoveryService } from './modules/platform/recovery/service.js';
 import { createInvitationService } from './modules/platform/invitations/service.js';
@@ -22,6 +23,7 @@ const app = await buildApp({
   trustedProxies: config.trustedProxies,
   ...(database && config.auth
     ? {
+        items: createItemService({ pool: database.pool, ...config.auth }),
         kitanda: createKitandaService({ pool: database.pool, ...config.auth }),
         recovery: createRecoveryService({ pool: database.pool, ...config.auth }),
         contexts: createContextService({ pool: database.pool, ...config.auth }),

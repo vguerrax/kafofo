@@ -1,3 +1,5 @@
+import { itemRoutes } from './modules/kitanda/item-routes.js';
+import type { ItemService } from './modules/kitanda/items.js';
 import { kitandaRoutes } from './modules/kitanda/routes.js';
 import type { KitandaService } from './modules/kitanda/service.js';
 import { recoveryRoutes } from './modules/platform/recovery/routes.js';
@@ -18,6 +20,7 @@ import type { AuthService } from './modules/platform/auth/service.js';
 import { AuthError } from './modules/platform/auth/policies.js';
 
 interface AppOptions {
+  items?: ItemService;
   kitanda?: KitandaService;
   recovery?: RecoveryService;
   invitations?: InvitationService;
@@ -112,6 +115,7 @@ export async function buildApp(options: AppOptions = {}) {
   await app.register(kitandaRoutes(options.kitanda, options.authOrigin), {
     prefix: '/api/kitanda',
   });
+  await app.register(itemRoutes(options.items, options.authOrigin), { prefix: '/api/kitanda' });
   app.addHook('onClose', async () => {
     await options.auth?.close();
     await options.database?.close();

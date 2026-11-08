@@ -9,6 +9,7 @@ export { residences, residenceAccesses } from './contexts/schema.js';
 export interface ResidenceActor {
   userId: string;
   residenceId: string;
+  residenceName: string;
   residenceAccessId: string;
   role: 'responsible' | 'collaborator' | 'viewer';
 }
@@ -52,8 +53,8 @@ export function createResidenceScope(options: PlatformAccessOptions) {
         await c.query('select pg_advisory_xact_lock(hashtext($1))', [key]);
       const s = await session(c, headers);
       const a = (
-        await c.query<{ id: string; role: ResidenceActor['role'] }>(
-          'select a.id,a.role from platform.residence_accesses a join platform.core_memberships m on m.id=a."membershipId" and m."coreId"=a."coreId" join platform.residences r on r.id=a."residenceId" and r."coreId"=m."coreId" where a."residenceId"=$1 and m."userId"=$2 and a."revokedAt" is null and m."revokedAt" is null',
+        await c.query<{ id: string; role: ResidenceActor['role']; residenceName: string }>(
+          'select a.id,a.role,r.name as "residenceName" from platform.residence_accesses a join platform.core_memberships m on m.id=a."membershipId" and m."coreId"=a."coreId" join platform.residences r on r.id=a."residenceId" and r."coreId"=m."coreId" where a."residenceId"=$1 and m."userId"=$2 and a."revokedAt" is null and m."revokedAt" is null',
           [initial.residenceId, s.user.id],
         )
       ).rows[0];
@@ -61,6 +62,7 @@ export function createResidenceScope(options: PlatformAccessOptions) {
       return operation(c, {
         userId: s.user.id,
         residenceId: initial.residenceId,
+        residenceName: a.residenceName,
         residenceAccessId: a.id,
         role: a.role,
       });

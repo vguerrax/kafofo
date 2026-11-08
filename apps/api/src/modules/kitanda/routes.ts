@@ -49,7 +49,7 @@ export function kitandaRoutes(
           tags,
           security,
           params: residence,
-          response: { 200: Type.Array(c.ListInfoSchema), ...errors },
+          response: { 200: Type.Array(c.ListCardSchema), ...errors },
         },
       },
       (req) => service!.collection(h(req.headers.cookie), req.params.residenceId),
