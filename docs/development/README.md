@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; a #11 acrescenta metadados e compartilhamento de listas de residência; itens, histórico e demais capacidades permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; a #11 acrescenta metadados e compartilhamento de listas de residência; a #12 acrescenta itens e progresso; histórico e demais capacidades permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -240,7 +240,7 @@ A [#11](https://github.com/vguerrax/kafofo/issues/11) usa a migração `0005`, a
 
 Selecione núcleo e residência em “Núcleos e residências”. O painel de listas aparece somente para uma residência à qual a conta tem acesso. Responsável/colaborador cria lista privada e edita metadados; o criador com papel de escrita compartilha com pessoas da mesma residência ou revoga compartilhamento. Visualizador somente consulta. Cargos administrativos não tornam listas privadas visíveis.
 
-A tela atualiza as consultas ao retornar ou pelo botão “Atualizar listas”. Revogação impede novas operações imediatamente no backend. A autoria permanece após reingresso, mas o papel atual limita ações; participantes precisam receber novo compartilhamento para a nova concessão residencial. Não há itens, progresso, links públicos, transferência, notificações ou lixeira neste recorte. A integração do histórico da #15 é requisito antes da publicação dessas operações.
+A tela atualiza as consultas ao retornar ou pelo botão “Atualizar listas”. Revogação impede novas operações imediatamente no backend. A autoria permanece após reingresso, mas o papel atual limita ações; participantes precisam receber novo compartilhamento para a nova concessão residencial. Itens e progresso são acrescentados pela #12, descrita abaixo. Links públicos, transferência, notificações e lixeira não fazem parte deste recorte. A integração do histórico da #15 é requisito antes da publicação dessas operações.
 
 Configure `KITANDA_TEST_DATABASE_URL` com banco descartável exclusivo terminado em `_kitanda_test`, diferente dos demais bancos, e execute sequencialmente:
 
@@ -250,3 +250,22 @@ pnpm test:kitanda:e2e
 ```
 
 Navegador usa portas exclusivas 4411/5411, duas sessões, celular e teclado. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo ficam desabilitadas. Não executar builds/instalações em paralelo com navegador. Integração testa privacidade, integridade entre residências, papéis, reingresso, revogação e locks. O guia de [CI](ci.md) descreve as regressões da plataforma.
+
+## Itens e progresso do Kitanda
+
+A [#12](https://github.com/vguerrax/kafofo/issues/12) usa a migração `0006`, aplicada explicitamente por `pnpm db:migrate`. Acrescenta itens com quantidade `NUMERIC(9,3)` e exclusão lógica. Não há unicidade de nome: itens iguais permanecem separados.
+
+Abra uma lista e adicione nome, quantidade/unidade independentes e observação opcional. A interface aceita `0,5` ou `0.5`; envia texto decimal com ponto. A API não aceita número JSON, expoente, separador de milhar ou mais de três casas. Recusa excesso sem arredondar. Opcionais vazios ficam null. PATCH preserva omitidos e aceita null para limpar opcionais.
+
+Marcar/desmarcar envia o estado desejado; repetir não inverte nem muda timestamp. Pendentes e comprados ficam separados. Cartões exibem residência e totais atuais; uma compra em três itens mostra 33,3%, independentemente da quantidade de cada item. Vazio não tem percentual. Remover preserva o registro e o exclui de coleções/contagens. Não há restauração individual. A lista continua disponível após 100%.
+
+`pnpm --filter @kafofo/api test:kitanda` executa sequencialmente integrações de listas e itens no mesmo `KITANDA_TEST_DATABASE_URL` descartável exclusivo, terminado em `_kitanda_test`. Para navegador, execute também:
+
+```bash
+pnpm test:kitanda:e2e
+pnpm test:items:e2e
+```
+
+A suíte de itens usa 4412/5412, reutiliza a fixture e o banco descartável do Kitanda e limpa os dados ao preparar o percurso. Não execute essas suítes simultaneamente contra o mesmo banco nem use dados reais. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo ficam desabilitadas. Não executar builds/instalações junto ao navegador.
+
+Os percursos cobrem vírgula/ponto, grupos, edição, remoção, percentual, celular, teclado, preservação de formulário após erro e visualizador sem escrita. Repetição automática de criação, conflitos e polling ficam na #13; limpeza/lixeira na #14; histórico/auditoria na #15, cuja integração é requisito antes da publicação das operações com histórico.

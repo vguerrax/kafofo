@@ -55,6 +55,16 @@ Remover espaços nas extremidades dos textos acima, preservando espaços interno
 
 Quantidade vazia permanece sem valor, sem assumir 1. Quantidade e unidade são independentes. Interface aceita vírgula ou ponto como separador decimal, sem separador de milhar; a API preserva as restrições de valor/precisão. Zero, negativos e excesso de precisão são recusados, sem arredondamento silencioso. Não converter nem padronizar unidades automaticamente. Unidade livre pode conter variações como kg/quilo; soma de duplicados está adiada.
 
+### Contrato técnico de itens e resumos
+
+A [#12](https://github.com/vguerrax/kafofo/issues/12) expõe coleção/criação em `GET/POST /api/kitanda/lists/:listId/items`, edição/remoção em `PATCH/DELETE /lists/:listId/items/:itemId` e marcação em `PUT /lists/:listId/items/:itemId/purchased` com estado desejado. Todas reutilizam a política comum da #11. Item é consultado pelo par lista/item; removidos ficam fora da coleção e das mutações. Exclusão individual é lógica, sem restauração individual nesta entrega.
+
+Quantidade transita como texto decimal ou null, é validada antes de persistir em `NUMERIC(9,3)` e retorna canônica, sem zeros finais desnecessários. A API aceita dígitos e ponto decimal, sem sinal, expoente ou separador de milhar; exige até três casas na entrada, inclusive quando casas adicionais seriam zero. A interface aceita vírgula ou ponto e normaliza para ponto. Quantidade, unidade e observação ausentes retornam null; no PATCH, omitir preserva, null limpa opcionais. Edição de metadados não altera compra. Repetir o estado desejado é um no-op, inclusive para `updatedAt`.
+
+A coleção de listas inclui residência, total ativo e total comprado calculados na mesma consulta, com agregação restrita às listas autorizadas e sem contadores persistidos. Itens removidos não entram nos totais. O frontend calcula o percentual por contagem de itens e exibe grupos pendentes/comprados, ordenados por criação e ID. Após mutação confirmada, atualiza detalhe e cartões; falhas preservam formulário preenchido. A lista continua reutilizável após 100%.
+
+Atualização periódica, conflitos e repetição segura de criação após resposta perdida pertencem à #13. Limpeza de comprados, lixeira e restauração pertencem à #14; histórico e auditoria à #15. A dependência da #15 antes da publicação de operações com histórico permanece vigente.
+
 ## Compras e progresso
 
 Marcar/desmarcar não exige confirmação ou motivo. Comprados permanecem separados visualmente dos pendentes. Comando envia estado desejado, não inversão cega. Lista permanece reutilizável após 100% das compras.

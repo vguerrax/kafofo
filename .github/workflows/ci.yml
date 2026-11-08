@@ -165,7 +165,7 @@ jobs:
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:recovery:e2e
 
-      - name: Integração das listas e compartilhamentos
+      - name: Integração do Kitanda (listas e itens)
         run: pnpm --filter @kafofo/api test:kitanda
       - name: E2E das listas em HTTP
         run: pnpm test:kitanda:e2e
@@ -174,3 +174,11 @@ jobs:
           AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:kitanda:e2e
+
+      - name: E2E dos itens em HTTP
+        run: pnpm test:items:e2e
+      - name: E2E dos itens em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:items:e2e
