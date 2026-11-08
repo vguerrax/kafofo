@@ -124,17 +124,6 @@ export function createLifecycleService(options: PlatformAccessOptions) {
         listId,
         'write',
         async (c, a, row) => {
-          // clock_timestamp é lido depois dos locks, inclusive se a transação esperou.
-          if (
-            row.deletedAt !== null &&
-            !(
-              await c.query(
-                'select 1 from kitanda.lists where id=$1 and "deletedAt">clock_timestamp()-interval \'720 hours\'',
-                [listId],
-              )
-            ).rowCount
-          )
-            throw listNotFound();
           return confirm(
             c,
             { userId: a.userId, action: 'list.restore', parentId: listId, key },
@@ -142,10 +131,11 @@ export function createLifecycleService(options: PlatformAccessOptions) {
             async () => {
               if (row.lifecycleRevision !== expectedRevision || row.deletedAt === null)
                 throw cycleConflict();
-              await c.query(
-                'update kitanda.lists set "deletedAt"=null,"deletedBy"=null,"lifecycleRevision"="lifecycleRevision"+1,"updatedAt"=statement_timestamp() where id=$1',
+              const restored = await c.query(
+                'update kitanda.lists set "deletedAt"=null,"deletedBy"=null,"lifecycleRevision"="lifecycleRevision"+1,"updatedAt"=statement_timestamp() where id=$1 and "deletedAt">clock_timestamp()-interval \'720 hours\' returning id',
                 [listId],
               );
+              if (!restored.rowCount) throw listNotFound();
               return { resourceId: listId, version: row.lifecycleRevision + 1 };
             },
             now,

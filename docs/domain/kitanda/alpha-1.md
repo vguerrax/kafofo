@@ -101,6 +101,20 @@ Excluir lista exige confirmação e a retira do uso ativo. Lixeira somente para 
 
 Histórico identifica ator e momento das operações entregues, incluindo compartilhamento, revogação e restauração. Consulta segue autorização atual. Não confundir histórico do domínio com log técnico ou prometer conteúdo permanente depois de expurgo.
 
+### Contrato técnico do ciclo de vida
+
+A [#14](https://github.com/vguerrax/kafofo/issues/14) acrescenta `POST /lists/:listId/items/clear-purchased`, `DELETE /lists/:listId`, `GET /residences/:residenceId/trash` e `POST /lists/:listId/restore`, sob `/api/kitanda`. Todas usam autorização atual; mutações exigem escrita e `Idempotency-Key` UUID. Recurso invisível/inexistente retorna 404, escrita negada em recurso visível retorna 403 e confirmação desatualizada retorna 409.
+
+Limpeza recebe `{targets: [{itemId, expectedVersion}]}`. A seleção não admite duplicatas, alvos de outra lista, removidos, desmarcados ou com versão diferente. Toda a seleção é validada antes de qualquer exclusão; divergência retorna `CLEAR_SELECTION_CHANGED`, sem efeito parcial. A interface apresenta a seleção congelada, até 500 alvos por confirmação, com nome e campos existentes; novos comprados fora dela permanecem. Para mais de 500, informa explicitamente o recorte. Uma seleção revisada exige nova confirmação/chave. Os removidos recebem timestamp do servidor e incremento de versão; o comprovante mínimo do lote identifica a lista, sem conteúdo dos itens.
+
+Listas recebem `lifecycleRevision`, inicialmente 1, independente da versão dos itens e dos metadados. Exclusão/restauração recebem `{expectedRevision}` e confirmam com `{confirmed, resourceId, version}`, onde `version` é a revisão do ciclo resultante. Cada transição efetiva incrementa essa revisão. Repetição reconhecida pela chave confirma o efeito original sem transição adicional. A exclusão registra instante/ator e preserva itens e concessões; todas as rotas ativas, inclusive resumos e compartilhamentos, deixam de disponibilizar a lista. A restauração altera somente a lista.
+
+Lixeira retorna somente ID, nome, revisão, instante de exclusão, prazo de recuperação e capacidade atual de escrita. O prazo é de 720 horas exatas, calculado pelo PostgreSQL com timestamps UTC. A restauração revalida o prazo depois dos locks; no vencimento, a lista some da lixeira e retorna 404 na restauração, mesmo antes do expurgo físico. O novo ciclo não aceita uma confirmação antiga.
+
+Expurgo executa ao iniciar a API e a cada hora, com até 50 candidatos de cada categoria por execução, uma transação por unidade e sem sobreposição do agendador no processo. Timestamps/índices persistidos permitem retomar após reinício. Instâncias disputam os locks de domínio na ordem núcleo → residência → lista; manutenção sem ator não adquire lock de conta. Candidato ocupado é deixado para um ciclo posterior. Estado e prazo são revalidados depois do lock. Falha reverte a unidade e mantém seu trabalho para nova tentativa.
+
+Itens removidos vencem individualmente após 720 horas, inclusive enquanto sua lista está na lixeira; excluir/restaurar lista não reinicia esse prazo. Lista vencida elimina itens, concessões e comprovantes vinculados junto ao registro. Os pontos transacionais `RetentionHistory.redactItem/removeList` permitem integrar a redação/remoção dos eventos na mesma conexão. O histórico real e essa integração pertencem à [#15](https://github.com/vguerrax/kafofo/issues/15); a publicação exige validá-los juntos, conforme a ADR-0023. Testes de contrato desse ponto não comprovam o histórico consultável.
+
 ## Aceitação complementar
 
 | Cenário | Resultado esperado |

@@ -22,7 +22,7 @@ export function retentionMaintenance(
         residenceId: string;
         kind: 'item' | 'list';
       }>(
-        '(select i.id,i."listId",l."residenceId",\'item\' as kind from kitanda.items i join kitanda.lists l on l.id=i."listId" where i."deletedAt"<=clock_timestamp()-interval \'720 hours\' order by i."deletedAt",i.id limit 50) union all (select l.id,l.id as "listId",l."residenceId",\'list\' as kind from kitanda.lists l where l."deletedAt"<=clock_timestamp()-interval \'720 hours\' order by l."deletedAt",l.id limit 50)',
+        '(select i.id,i."listId",l."residenceId",\'item\' as kind from kitanda.items i join kitanda.lists l on l.id=i."listId" where i."deletedAt"<=statement_timestamp()-interval \'720 hours\' order by i."deletedAt",i.id limit 50) union all (select l.id,l.id as "listId",l."residenceId",\'list\' as kind from kitanda.lists l where l."deletedAt"<=statement_timestamp()-interval \'720 hours\' order by l."deletedAt",l.id limit 50)',
       )
     ).rows;
     for (const candidate of candidates) {

@@ -195,3 +195,20 @@ select:focus-visible {
   display: grid;
   gap: 10px;
 }
+
+.lists-panel dialog {
+  max-width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border: 2px solid #284d40;
+  border-radius: 12px;
+  color: inherit;
+  background: #fffef9;
+}
+.lists-panel dialog::backdrop {
+  background: #0008;
+}
+.lists-panel dialog button {
+  margin: 8px;
+}

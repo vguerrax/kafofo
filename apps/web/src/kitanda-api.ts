@@ -15,6 +15,8 @@ import {
   type ListInfo,
   type ShareCandidate,
   type ListShare,
+  TrashListSchema,
+  type TrashList,
 } from '@kafofo/contracts';
 import { ApiError } from './api';
 async function request<T>(
@@ -66,6 +68,13 @@ async function request<T>(
   return data as T;
 }
 export const kitandaApi = {
+  trash: (res: string) =>
+    request<TrashList[]>(
+      '/residences/' + res + '/trash',
+      'GET',
+      undefined,
+      Type.Array(TrashListSchema),
+    ),
   collection: (res: string) =>
     request<ListCard[]>(
       '/residences/' + res + '/lists',

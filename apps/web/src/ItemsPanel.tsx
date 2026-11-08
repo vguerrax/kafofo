@@ -6,6 +6,7 @@ import { quantityInput, progressLabel } from './item-format';
 import { createItemFeed } from './item-feed';
 import { useConfirmation } from './use-confirmation';
 import { PendingNotice } from './PendingNotice';
+import { ConfirmationDialog } from './ConfirmationDialog';
 type Draft = { name: string; quantity: string; unit: string; notes: string };
 const empty = (): Draft => ({ name: '', quantity: '', unit: '', notes: '' });
 const draftOf = (r: ItemInfo): Draft => ({
@@ -82,6 +83,8 @@ export function ItemsPanel({
     [editor, setEditor] = useState<{ id: string; baseVersion: number; draft: Draft } | null>(null),
     [error, setError] = useState(''),
     [stale, setStale] = useState('');
+  const [clearing, setClearing] = useState<ItemInfo[] | null>(null);
+  const clearButton = useRef<HTMLButtonElement>(null);
   const feed = useRef<ReturnType<typeof createItemFeed<ItemSnapshot>> | null>(null),
     callbacks = useRef({ onSnapshot, onBlocked, onConfirmed }),
     lastRead = useRef(0);
@@ -101,6 +104,7 @@ export function ItemsPanel({
     setRows([]);
     setEditor(null);
     setNewDraft(empty());
+    setClearing(null);
     callbacks.current.onBlocked(status);
   }
   useEffect(() => {
@@ -110,6 +114,7 @@ export function ItemsPanel({
       onValue: (snapshot: ItemSnapshot) => {
         lastRead.current++;
         setRows(snapshot.items);
+        if (!snapshot.list.canWrite) setClearing(null);
         setStale('');
         callbacks.current.onSnapshot(snapshot);
       },
@@ -193,6 +198,57 @@ export function ItemsPanel({
       {error && <p role="alert">{error}</p>}
       <PendingNotice state={command} canWrite={canWrite} onCheck={check} />
       <button onClick={() => void feed.current?.refresh()}>Atualizar itens</button>
+      {canWrite && (
+        <button
+          ref={clearButton}
+          disabled={disabled || !rows.some((r) => r.purchased)}
+          onClick={() => setClearing(rows.filter((r) => r.purchased).slice(0, 500))}
+        >
+          Limpar comprados
+        </button>
+      )}
+      {clearing && canWrite && (
+        <ConfirmationDialog
+          title="Confirmar limpeza"
+          confirmLabel="Confirmar limpeza"
+          onCancel={() => {
+            setClearing(null);
+            clearButton.current?.focus();
+          }}
+          onConfirm={() => {
+            const targets = clearing.map((r) => ({ itemId: r.id, expectedVersion: r.version }));
+            setClearing(null);
+            clearButton.current?.focus();
+            void command.execute(
+              prepareCommand(
+                '/lists/' + listId + '/items/clear-purchased',
+                'POST',
+                { targets },
+                false,
+              ),
+              confirmed,
+            );
+          }}
+        >
+          <p>
+            Remover somente estes {clearing.length} comprados? A limpeza é atômica e não permite
+            restaurar itens individualmente.
+          </p>
+          {rows.filter((r) => r.purchased).length > 500 && (
+            <p>
+              Esta confirmação contém os primeiros 500 comprados. Os demais permanecem na lista.
+            </p>
+          )}
+          <ul>
+            {clearing.map((r) => (
+              <li key={r.id}>
+                {r.name} — {r.quantity} {r.unit}
+                {r.notes && <p>{r.notes}</p>}
+              </li>
+            ))}
+          </ul>
+        </ConfirmationDialog>
+      )}
       {(canWrite || Object.values(newDraft).some(Boolean) || command.pending) && (
         <form onSubmit={add}>
           <fieldset disabled={disabled}>

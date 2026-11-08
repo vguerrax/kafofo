@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import type { ListInfo, ListCard, ListShare, ShareCandidate } from '@kafofo/contracts';
 import { kitandaApi } from './kitanda-api';
 import { ApiError } from './api';
+import { ListLifecyclePanel } from './ListLifecyclePanel';
 export function ListsPanel({
   residenceId,
   role,
@@ -219,6 +220,20 @@ export function ListsPanel({
       <button disabled={busy} onClick={() => void refresh()}>
         Atualizar listas
       </button>
+      <ListLifecyclePanel
+        residenceId={residenceId}
+        list={detail}
+        onUnauthenticated={onUnauthenticated}
+        onChanged={refresh}
+        onRemoving={() => {
+          version.current++;
+          setSelected('');
+          setDetail(null);
+          setShares([]);
+          setCandidates([]);
+          setMetadataOpen(false);
+        }}
+      />
       <PendingNotice
         state={creation}
         canWrite={canCreate}

@@ -256,7 +256,8 @@ async function ageList(id: string, offset: string) {
   );
 }
 it('recuperação usa prazo do banco: antes pode, no vencimento some e recusa mesmo sem expurgo', async () => {
-  const { owner, listId, residence } = await listFixture();
+  const { owner, viewer, viewerAccess, listId, residence } = await listFixture();
+  await kitanda.share(owner.headers, listId, viewerAccess);
   await kitanda.remove(owner.headers, listId, 1, randomUUID());
   await ageList(listId, '1 second');
   expect(await kitanda.trash(owner.headers, residence.id)).toHaveLength(1);
@@ -264,6 +265,9 @@ it('recuperação usa prazo do banco: antes pode, no vencimento some e recusa me
   await kitanda.remove(owner.headers, listId, 3, randomUUID());
   await ageList(listId, '0 seconds');
   expect(await kitanda.trash(owner.headers, residence.id)).toEqual([]);
+  await expect(kitanda.restore(viewer.headers, listId, 4, randomUUID())).rejects.toMatchObject({
+    status: 404,
+  });
   await expect(kitanda.restore(owner.headers, listId, 4, randomUUID())).rejects.toMatchObject({
     status: 404,
   });

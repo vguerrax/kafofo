@@ -70,6 +70,18 @@ export function createListAccess(options: PlatformAccessOptions) {
         ).rows[0];
         if (!row) throw listNotFound();
         if (!lifecycle && row.deletedAt !== null) throw listNotFound();
+        // Prazo calculado no banco após os locks, antes de avaliar escrita.
+        if (
+          lifecycle &&
+          row.deletedAt !== null &&
+          !(
+            await c.query(
+              'select 1 from kitanda.lists where id=$1 and "deletedAt">clock_timestamp()-interval \'720 hours\'',
+              [listId],
+            )
+          ).rowCount
+        )
+          throw listNotFound();
         const caps = listCapabilities(row.creatorId === actor.userId, actor.role);
         if (
           (capability === 'write' && !caps.canWrite) ||
