@@ -117,6 +117,7 @@ export async function buildApp(options: AppOptions = {}) {
   });
   await app.register(itemRoutes(options.items, options.authOrigin), { prefix: '/api/kitanda' });
   app.addHook('onClose', async () => {
+    await options.kitanda?.close();
     await options.auth?.close();
     await options.database?.close();
   });

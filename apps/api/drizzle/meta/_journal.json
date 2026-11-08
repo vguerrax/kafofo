@@ -50,6 +50,13 @@
       "when": 1794102350336,
       "tag": "0006_kitanda-items",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794103890742,
+      "tag": "0007_kitanda-collaboration",
+      "breakpoints": true
     }
   ]
 }

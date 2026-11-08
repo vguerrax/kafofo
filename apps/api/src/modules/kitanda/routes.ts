@@ -20,7 +20,7 @@ export function kitandaRoutes(
         throw new AuthError(403, 'UNTRUSTED_ORIGIN', 'Origem da requisição não permitida.');
     });
     const errors = Object.fromEntries(
-      [400, 401, 403, 404, 503].map((n) => [n, c.ErrorResponseSchema]),
+      [400, 401, 403, 404, 409, 503].map((n) => [n, c.ErrorResponseSchema]),
     );
     const security = [{ sessionCookie: [] }, { secureSessionCookie: [] }],
       tags = ['kitanda'];
@@ -63,14 +63,22 @@ export function kitandaRoutes(
           tags,
           security,
           params: residence,
+          headers: c.IdempotencyHeadersSchema,
           body: c.ListCreateSchema,
-          response: { 201: c.ListInfoSchema, ...errors },
+          response: { 201: c.MutationReceiptSchema, ...errors },
         },
       },
       async (req, reply) =>
         reply
           .code(201)
-          .send(await service!.create(h(req.headers.cookie), req.params.residenceId, req.body)),
+          .send(
+            await service!.create(
+              h(req.headers.cookie),
+              req.params.residenceId,
+              req.body,
+              req.headers['idempotency-key'],
+            ),
+          ),
     );
     app.get(
       '/lists/:listId',

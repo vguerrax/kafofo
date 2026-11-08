@@ -1,7 +1,11 @@
 import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
-    include: ['tests/kitanda.integration.test.ts', 'tests/items.integration.test.ts'],
+    include: [
+      'tests/kitanda.integration.test.ts',
+      'tests/items.integration.test.ts',
+      'tests/collaboration.integration.test.ts',
+    ],
     fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,

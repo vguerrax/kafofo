@@ -1,3 +1,4 @@
+import { listActions } from './kitanda-actions.js';
 import { createLogger } from '../src/logger.js';
 import { createKitandaService } from '../src/modules/kitanda/service.js';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +14,7 @@ const baseURL = 'http://127.0.0.1:5304',
   secret = randomUUID() + randomUUID(),
   password = 'test-password';
 let db: Awaited<ReturnType<typeof kitandaDatabase>>;
-let kitanda: ReturnType<typeof createKitandaService>;
+let kitanda: ReturnType<typeof listActions>;
 let clock = Date.now();
 let logs = '';
 let service: ReturnType<typeof createContextService>;
@@ -38,7 +39,8 @@ beforeAll(async () => {
   options = { pool: db.pool, secret, baseURL };
   auth = createAuthService(options);
   service = createContextService(options);
-  kitanda = createKitandaService({ ...options, now: () => clock });
+  const kitandaCommands = createKitandaService({ ...options, now: () => clock });
+  kitanda = listActions(kitandaCommands);
   app = await buildApp({
     logger: createLogger('info', {
       write: (line: string) => {
@@ -48,7 +50,7 @@ beforeAll(async () => {
     auth,
     authOrigin: baseURL,
     contexts: service,
-    kitanda,
+    kitanda: kitandaCommands,
   });
 });
 beforeEach(async () => {
@@ -234,7 +236,11 @@ it('integridade e API recusam vínculos cruzados sem revelar destinatários', as
 });
 it('IDs e corpos HTTP estritos, origem e superfícies futuras fechadas', async () => {
   const { owner, residence } = await fixture(),
-    headers = { origin: baseURL, cookie: owner.headers.get('cookie')! };
+    headers = {
+      origin: baseURL,
+      cookie: owner.headers.get('cookie')!,
+      'idempotency-key': randomUUID(),
+    };
   expect((await app.inject('/api/kitanda/residences/' + residence.id + '/lists')).statusCode).toBe(
     401,
   );
@@ -259,7 +265,7 @@ it('IDs e corpos HTTP estritos, origem e superfícies futuras fechadas', async (
     payload: { name: 'Lista' },
   });
   expect(response.statusCode).toBe(201);
-  const id = response.json().id as string;
+  const id = response.json().resourceId as string;
   expect(
     (await app.inject({ method: 'PATCH', url: '/api/kitanda/lists/' + id, headers, payload: {} }))
       .statusCode,
@@ -329,7 +335,11 @@ it('logs técnicos não incluem nome e descrição privados', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/kitanda/residences/' + residence.id + '/lists',
-    headers: { origin: baseURL, cookie: owner.headers.get('cookie')! },
+    headers: {
+      origin: baseURL,
+      cookie: owner.headers.get('cookie')!,
+      'idempotency-key': randomUUID(),
+    },
     payload: { name: 'private-marker-name', description: 'private-marker-description' },
   });
   expect(response.statusCode).toBe(201);

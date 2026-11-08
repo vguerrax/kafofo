@@ -11,6 +11,7 @@ import {
   numeric,
   boolean,
   check,
+  integer,
 } from 'drizzle-orm/pg-core';
 import { user, residences, residenceAccesses } from '../platform/public.js';
 export const kitandaSchema = pgSchema('kitanda');
@@ -62,6 +63,7 @@ export const listShares = kitandaSchema.table(
 export const items = kitandaSchema.table(
   'items',
   {
+    version: integer().notNull().default(1),
     id: uuid().primaryKey(),
     listId: uuid()
       .notNull()
@@ -80,5 +82,27 @@ export const items = kitandaSchema.table(
       .on(t.listId, t.createdAt, t.id)
       .where(sql`${t.deletedAt} is null`),
     check('item_quantity_range', sql`${t.quantity} > 0 and ${t.quantity} <= 999999.999`),
+  ],
+);
+
+export const mutationReceipts = kitandaSchema.table(
+  'mutation_receipts',
+  {
+    id: uuid().primaryKey(),
+    userId: text()
+      .notNull()
+      .references(() => user.id),
+    action: text().notNull(),
+    parentId: uuid().notNull(),
+    key: uuid().notNull(),
+    fingerprint: text().notNull(),
+    resourceId: uuid().notNull(),
+    version: integer(),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [
+    unique('receipt_identity').on(t.userId, t.action, t.parentId, t.key),
+    index('receipt_expiry').on(t.expiresAt),
   ],
 );

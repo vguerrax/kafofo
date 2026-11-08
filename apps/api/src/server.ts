@@ -16,6 +16,10 @@ const database = config.databaseUrl
   : undefined;
 const auth =
   database && config.auth ? createAuthService({ pool: database.pool, ...config.auth }) : undefined;
+const kitanda =
+  database && config.auth
+    ? createKitandaService({ pool: database.pool, ...config.auth })
+    : undefined;
 const app = await buildApp({
   logger,
   ...(database ? { database } : {}),
@@ -24,13 +28,14 @@ const app = await buildApp({
   ...(database && config.auth
     ? {
         items: createItemService({ pool: database.pool, ...config.auth }),
-        kitanda: createKitandaService({ pool: database.pool, ...config.auth }),
+        ...(kitanda ? { kitanda } : {}),
         recovery: createRecoveryService({ pool: database.pool, ...config.auth }),
         contexts: createContextService({ pool: database.pool, ...config.auth }),
         invitations: createInvitationService({ pool: database.pool, ...config.auth }),
       }
     : {}),
 });
+kitanda?.startCleanup(() => logger.error('Falha na limpeza de comprovantes do Kitanda.'));
 auth?.startCleanup(() => logger.error('Falha na limpeza de registros expirados de autenticação.'));
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
