@@ -19,3 +19,11 @@ A comunicação deve ser próxima, clara e inclusiva, sem infantilização nem p
 As referências culturais devem ser documentadas com responsabilidade. K e Y são preferência estética de marca quando a adaptação fizer sentido, sem forçar presença nem atribuir origem linguística à estilização. Esta entrega não realizou validação etimológica ou pesquisa de disponibilidade comercial.
 
 O documento de marca lista quatro módulos oficiais; as duas especificações adicionais ampliam o catálogo funcional conhecido. Atualização do documento integral de marca está registrada em Q-P19, sem inventar justificativa para os nomes adicionais. A intenção open-source não substitui a escolha da licença na ADR-0022.
+
+## Aplicação visual na Alpha 2
+
+O Kafofo adota uma base visual compartilhada na Alpha 2, depois da triagem do piloto da Alpha 1. A Alpha 1 continua centrada na homologação da compra compartilhada e da instalação. A triagem orienta quais telas devem receber ajustes primeiro.
+
+A base inclui paleta da plataforma, uma cor de destaque para o Kitanda, escala tipográfica e padrões para botões, formulários, cartões e mensagens. A primeira aplicação cobre o login, o seletor de residência e o percurso de compra. Verificar contraste e leitura no celular, foco visível e uso por teclado. Estados de erro e compra devem ser identificáveis sem depender só da cor.
+
+O logotipo definitivo, o manual de marca e os temas completos dos módulos ficam para depois da validação dessa base. A implementação é acompanhada na [issue #31](https://github.com/vguerrax/kafofo/issues/31) e depende da [triagem do piloto](https://github.com/vguerrax/kafofo/issues/29).
