@@ -1,10 +1,12 @@
+import { ItemsPanel } from './ItemsPanel';
+import { progressLabel } from './item-format';
 import { contextApi } from './context-api';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import type { ListInfo, ListShare, ShareCandidate } from '@kafofo/contracts';
+import type { ListInfo, ListCard, ListShare, ShareCandidate } from '@kafofo/contracts';
 import { kitandaApi } from './kitanda-api';
 import { ApiError } from './api';
 export function ListsPanel({ residenceId, role }: { residenceId: string; role: string }) {
-  const [rows, setRows] = useState<ListInfo[]>([]),
+  const [rows, setRows] = useState<ListCard[]>([]),
     [selected, setSelected] = useState(''),
     [detail, setDetail] = useState<ListInfo | null>(null),
     [shares, setShares] = useState<ListShare[]>([]),
@@ -53,8 +55,10 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       const list = await kitandaApi.detail(selected);
       if (current !== version.current) return;
       setDetail(list);
-      setShares([]);
-      setCandidates([]);
+      if (!list.canManageShares) {
+        setShares([]);
+        setCandidates([]);
+      }
       if (list.canManageShares) {
         const [cs, ss] = await Promise.all([
           kitandaApi.candidates(selected),
@@ -145,15 +149,19 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
       <ul>
         {rows.map((r) => (
           <li key={r.id}>
-            <button
-              disabled={busy}
-              onClick={() => {
-                setSelected(r.id);
-                setDetail(null);
-              }}
-            >
-              Abrir {r.name}
-            </button>
+            <article className="list-card" aria-label={'Resumo de ' + r.name}>
+              <p>Residência: {r.residenceName}</p>
+              <p>{progressLabel(r.totalActive, r.totalPurchased)}</p>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  setSelected(r.id);
+                  setDetail(null);
+                }}
+              >
+                Abrir {r.name}
+              </button>
+            </article>
           </li>
         ))}
       </ul>
@@ -183,6 +191,12 @@ export function ListsPanel({ residenceId, role }: { residenceId: string; role: s
               <button disabled={busy}>Salvar lista</button>
             </form>
           )}
+          <ItemsPanel
+            key={'items-' + detail.id}
+            listId={detail.id}
+            canWrite={detail.canWrite}
+            onChanged={refresh}
+          />
           {detail.canManageShares && (
             <section aria-label="Compartilhamentos da lista">
               <h5>Compartilhar esta lista</h5>

@@ -2,6 +2,12 @@ import { Type, type TSchema } from 'typebox';
 import { Value } from 'typebox/value';
 import {
   ListInfoSchema,
+  ListCardSchema,
+  ItemInfoSchema,
+  type ListCard,
+  type ItemInfo,
+  type ItemCreate,
+  type ItemUpdate,
   ShareCandidateSchema,
   ListShareSchema,
   type ListInfo,
@@ -39,11 +45,11 @@ async function request<T>(
 }
 export const kitandaApi = {
   collection: (res: string) =>
-    request<ListInfo[]>(
+    request<ListCard[]>(
       '/residences/' + res + '/lists',
       'GET',
       undefined,
-      Type.Array(ListInfoSchema),
+      Type.Array(ListCardSchema),
     ),
   create: (res: string, input: { name: string; description: string }) =>
     request<ListInfo>('/residences/' + res + '/lists', 'POST', input, ListInfoSchema),
@@ -62,4 +68,27 @@ export const kitandaApi = {
   share: (id: string, access: string) => request<void>('/lists/' + id + '/shares/' + access, 'PUT'),
   revoke: (id: string, access: string) =>
     request<void>('/lists/' + id + '/shares/' + access, 'DELETE'),
+};
+
+export const itemApi = {
+  collection: (listId: string) =>
+    request<ItemInfo[]>(
+      '/lists/' + listId + '/items',
+      'GET',
+      undefined,
+      Type.Array(ItemInfoSchema),
+    ),
+  create: (listId: string, input: ItemCreate) =>
+    request<ItemInfo>('/lists/' + listId + '/items', 'POST', input, ItemInfoSchema),
+  update: (listId: string, itemId: string, input: ItemUpdate) =>
+    request<ItemInfo>('/lists/' + listId + '/items/' + itemId, 'PATCH', input, ItemInfoSchema),
+  purchased: (listId: string, itemId: string, purchased: boolean) =>
+    request<ItemInfo>(
+      '/lists/' + listId + '/items/' + itemId + '/purchased',
+      'PUT',
+      { purchased },
+      ItemInfoSchema,
+    ),
+  remove: (listId: string, itemId: string) =>
+    request<void>('/lists/' + listId + '/items/' + itemId, 'DELETE'),
 };
