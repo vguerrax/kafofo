@@ -17,6 +17,8 @@ import {
   type ListShare,
   TrashListSchema,
   type TrashList,
+  HistoryPageSchema,
+  type HistoryPage,
 } from '@kafofo/contracts';
 import { ApiError } from './api';
 async function request<T>(
@@ -68,6 +70,13 @@ async function request<T>(
   return data as T;
 }
 export const kitandaApi = {
+  history: (list: string, cursor: string | null) =>
+    request<HistoryPage>(
+      '/lists/' + list + '/history' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''),
+      'GET',
+      undefined,
+      HistoryPageSchema,
+    ),
   trash: (res: string) =>
     request<TrashList[]>(
       '/residences/' + res + '/trash',

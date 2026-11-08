@@ -6,6 +6,7 @@ import { createItemFeed } from './item-feed';
 import { useConfirmation } from './use-confirmation';
 import { PendingNotice } from './PendingNotice';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { HistoryPanel } from './HistoryPanel';
 
 type Selection = { kind: 'remove' | 'restore'; id: string; name: string; revision: number };
 export function ListLifecyclePanel({
@@ -27,6 +28,7 @@ export function ListLifecyclePanel({
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [canConfirm, setCanConfirm] = useState(true);
+  const [history, setHistory] = useState<{ id: string; name: string } | null>(null);
   const target = useRef<string | null>(null),
     reads = useRef(0),
     feed = useRef<ReturnType<
@@ -52,6 +54,7 @@ export function ListLifecyclePanel({
     setRows([]);
     setSelection(null);
     setOpen(false);
+    setHistory(null);
     setError('A lixeira ou a lista não está mais disponível para você.');
     if (status === 401) callbacks.current.onUnauthenticated();
     else void callbacks.current.onChanged();
@@ -75,6 +78,9 @@ export function ListLifecyclePanel({
       onValue: (value) => {
         reads.current++;
         setRows(value.rows);
+        setHistory((current) =>
+          current && value.rows.some((r) => r.id === current.id) ? current : null,
+        );
         setCanConfirm(value.canWrite);
       },
       onError: () =>
@@ -151,6 +157,7 @@ export function ListLifecyclePanel({
         onClick={() => {
           setOpen(!open);
           setRows([]);
+          if (open) setHistory(null);
           if (!open) void feed.current?.refresh(true);
         }}
       >
@@ -180,6 +187,13 @@ export function ListLifecyclePanel({
             {rows.map((r) => (
               <li key={r.id}>
                 <p>{r.name}</p>
+                <button
+                  onClick={() =>
+                    setHistory(history?.id === r.id ? null : { id: r.id, name: r.name })
+                  }
+                >
+                  {history?.id === r.id ? 'Fechar histórico' : 'Ver histórico de ' + r.name}
+                </button>
                 <p>
                   Recuperável até{' '}
                   <time dateTime={r.recoverableUntil}>
@@ -202,6 +216,18 @@ export function ListLifecyclePanel({
               </li>
             ))}
           </ul>
+          {history && (
+            <HistoryPanel
+              key={history.id}
+              listId={history.id}
+              name={history.name}
+              onBlocked={(status) => {
+                setHistory(null);
+                if (status === 401) callbacks.current.onUnauthenticated();
+                else void feed.current?.refresh(true);
+              }}
+            />
+          )}
         </section>
       )}
       {selection && (

@@ -97,6 +97,16 @@ Senha, consumo, revogação de todas as sessões e evento de uso confirmam junto
 
 Padrões iniciais sem configuração pela interface. Não aplicar 30 dias indiscriminadamente a todas as categorias. A [ADR-0023](../../adr/0023-auditoria-retencao-alpha-1.md) substitui parcialmente a ADR-0010 para este incremento. Procedimentos de expurgo devem preservar consistência e retomada após reinício.
 
+### Contrato técnico da auditoria de segurança
+
+A [#15](https://github.com/vguerrax/kafofo/issues/15) registra emissão, aceitação e revogação de convites; criação/alteração de papel/revogação de vínculos e acessos residenciais, incluindo acessos revogados pela saída do núcleo. A criação do núcleo e da residência registra respectivamente o vínculo administrador e o acesso responsável que produz. Aceitar convite registra a aceitação e o vínculo criado; cadastro pelo convite usa a mesma transação da identidade. No-op não produz evento adicional.
+
+`platform.security_events` guarda somente ID, ação, ator, conta-alvo quando conhecida, referências de núcleo/residência/convite/vínculo/acesso, papéis anterior/novo e instante UTC do banco. Campos explícitos evitam serializar payloads, cabeçalhos ou conteúdo de listas. Recuperação reutiliza `platform.recovery_events`, preservando ação, ator (conta ou UID local), conta-alvo, canal e instante, sem duplicar registros em outra categoria. Nenhum evento inclui senha, hash, token, cookie, link ou segredo. Eventos e efeitos persistem na mesma transação; falha da auditoria reverte também criação da conta convidada, vínculos, consumo, senha e sessões envolvidos.
+
+A consulta operacional é feita pelo operador autorizado no PostgreSQL, usando os campos explícitos e filtrando `"createdAt" > statement_timestamp() - interval '2160 hours'` nas duas tabelas. A Alpha 1 não monta endpoint de consulta administrativa nem painel novo. Conta administrativa do produto não recebe conexão ao banco ou acesso a conteúdo privado por essa decisão. Exportação individual continua com autorização e recorte próprios na #19.
+
+A rotina horária/inicial da #14 também limpa auditoria. Transação própria remove até 500 eventos vencidos de cada tabela por execução, usando índices de data, locks e timestamps persistidos para concorrência e retomada. Prazo de 2160 horas (90 períodos de 24 horas), independente dos 30 dias de itens/listas e logs técnicos. Falha mantém candidatos para novo ciclo e o encerramento aguarda a limpeza. Não há ajuste pela interface. A migração não reconstrói eventos administrativos antigos ausentes; preserva os registros existentes de recuperação e lhes aplica a mesma retenção.
+
 ## Exportação individual básica
 
 Solicitada somente pelo próprio usuário autenticado, com confirmação da senha atual. Entrega por download direto de JSON, sem link público, com data de geração e versão do formato.

@@ -10,6 +10,7 @@ import type { ListInfo, ListCard, ListShare, ShareCandidate } from '@kafofo/cont
 import { kitandaApi } from './kitanda-api';
 import { ApiError } from './api';
 import { ListLifecyclePanel } from './ListLifecyclePanel';
+import { ListHistoryToggle } from './HistoryPanel';
 export function ListsPanel({
   residenceId,
   role,
@@ -295,6 +296,12 @@ export function ListsPanel({
             {detail.name}
           </h4>
           {detail.description && <p className="list-description">{detail.description}</p>}
+          <ListHistoryToggle
+            key={'history-' + detail.id}
+            listId={detail.id}
+            name={detail.name}
+            onBlocked={loseAccess}
+          />
           {(detail.canWrite || metadataOpen) && (
             <form key={detail.id} onSubmit={(e) => submit(e, false)}>
               <fieldset disabled={!detail.canWrite}>
