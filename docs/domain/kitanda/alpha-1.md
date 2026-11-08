@@ -30,6 +30,16 @@ Criar lista exige papel responsável/colaborador. Somente o criador compartilha/
 - Criador que retorna recupera acesso às próprias listas sujeito ao papel atual e ao ciclo de vida do registro. Como visualizador, apenas consulta. Não recupera lista já expurgada nem restaura automaticamente lista na lixeira.
 - Reingresso e restauração de lista não reativam concessões revogadas.
 
+### Contrato técnico de listas e compartilhamento
+
+A [#11](https://github.com/vguerrax/kafofo/issues/11) entrega metadados e compartilhamentos sob `/api/kitanda`, somente para residência. Coleção e detalhe filtram autoria ou concessão vigente, além de sessão e acesso atual à residência. Lista invisível ou inexistente retorna 404 com a mesma mensagem, inclusive fora da residência; ação proibida sobre lista visível retorna 403. Candidatos e gestão de concessões exigem criador com papel atual de escrita. O seletor recebe somente identificador da concessão residencial e nome de exibição.
+
+Autoria referencia a conta; compartilhamento referencia o ID da concessão residencial. Papel alterado no mesmo ID muda as capacidades, enquanto revogação e nova concessão não reativam compartilhamentos antigos. PUT repetido não duplica concessão ativa; DELETE repetido é idempotente para quem ainda gerencia. Compartilhar novamente após revogação cria ID de compartilhamento novo. Chaves compostas impedem associação entre lista e concessão de outra residência.
+
+Operações revalidam sessão e vínculos sob locks conta → núcleo → residência → lista, na mesma transação/conexão dos dados. A política comum de leitura, escrita e gestão deve ser reutilizada pelas operações das #12–15, inclusive coleções, resumos, histórico e lixeira quando forem introduzidos. Essas superfícies futuras não são disponibilizadas pela #11.
+
+A tela consulta novamente ao retornar ou usar “Atualizar listas”. Não há notificações de compartilhamento. Itens e progresso pertencem à #12; atualização periódica, conflitos e repetição após resposta perdida à #13; lixeira/restauração à #14. Histórico consultável e sua integração pertencem à #15, que precisa estar integrada antes de publicar as operações que exigem histórico. A entrega de metadados não comprova esses critérios futuros.
+
 ## Dados e validação
 
 | Campo | Obrigatoriedade e limite |

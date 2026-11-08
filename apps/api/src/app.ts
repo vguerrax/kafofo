@@ -1,3 +1,5 @@
+import { kitandaRoutes } from './modules/kitanda/routes.js';
+import type { KitandaService } from './modules/kitanda/service.js';
 import { recoveryRoutes } from './modules/platform/recovery/routes.js';
 import type { RecoveryService } from './modules/platform/recovery/service.js';
 import { invitationRoutes } from './modules/platform/invitations/routes.js';
@@ -16,6 +18,7 @@ import type { AuthService } from './modules/platform/auth/service.js';
 import { AuthError } from './modules/platform/auth/policies.js';
 
 interface AppOptions {
+  kitanda?: KitandaService;
   recovery?: RecoveryService;
   invitations?: InvitationService;
   logger?: FastifyBaseLogger;
@@ -76,7 +79,10 @@ export async function buildApp(options: AppOptions = {}) {
       openapi: '3.1.0',
       info: { title: 'Kafofo API', version: '0.0.0' },
       servers: [{ url: '/' }],
-      tags: [{ name: 'platform', description: 'Serviços básicos da plataforma' }],
+      tags: [
+        { name: 'platform', description: 'Serviços básicos da plataforma' },
+        { name: 'kitanda', description: 'Listas de compras da residência' },
+      ],
       components: {
         securitySchemes: {
           sessionCookie: { type: 'apiKey', in: 'cookie', name: 'better-auth.session_token' },
@@ -102,6 +108,9 @@ export async function buildApp(options: AppOptions = {}) {
   });
   await app.register(recoveryRoutes(options.recovery, options.authOrigin), {
     prefix: '/api/auth/recovery',
+  });
+  await app.register(kitandaRoutes(options.kitanda, options.authOrigin), {
+    prefix: '/api/kitanda',
   });
   app.addHook('onClose', async () => {
     await options.auth?.close();

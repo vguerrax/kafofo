@@ -75,6 +75,7 @@ export const residenceAccesses = platformSchema.table(
     uniqueIndex('residence_access_active')
       .on(t.residenceId, t.membershipId)
       .where(sql`${t.revokedAt} is null`),
+    unique('residence_access_residence_identity').on(t.id, t.residenceId),
     check('residence_access_role', sql`${t.role} in ('responsible','collaborator','viewer')`),
   ],
 );

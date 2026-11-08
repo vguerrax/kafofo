@@ -1,6 +1,6 @@
 # Desenvolvimento local
 
-Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; listas e auditoria definitiva permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
+Além da fundação da #4, a [#7](https://github.com/vguerrax/kafofo/issues/7) integra configuração inicial, login, sessão, logout e troca de senha na API e no frontend. A #8 acrescenta núcleos, residências e autorização contextual. A #9 acrescenta convites de núcleo; a #10 acrescenta recuperação de senha; a #11 acrescenta metadados e compartilhamento de listas de residência; itens, histórico e demais capacidades permanecem nas respectivas tarefas. Better Auth/adaptador 1.7.18 seguem as adaptações e os limites da [ADR-0008](../adr/0008-autenticacao-better-auth.md).
 
 O [laboratório de autenticação da #5](../../pocs/auth/README.md) possui banco, migrações, servidor, interface e verificações próprios. `pnpm dev` não inicia o laboratório; a API normal não recebe suas rotas. Testes de banco/navegador da POC são explícitos; suas verificações unitárias, tipos e build participam de `pnpm check`.
 
@@ -233,3 +233,20 @@ pnpm test:recovery:e2e
 ```
 
 Navegador usa servidores exclusivos nas portas 4410/5410, sem capturas de segredos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Integração inclui comando local, concorrência, rollback e auditoria. Os limites de consulta e envio são separados, 30 requisições/origem/minuto cada, com `Retry-After`; cadastro ou login não limpam esses contadores. A emissão HTTP também tem limite de 30/origem/minuto, além da cota por alvo. Não execute builds/instalações junto ao navegador.
+
+## Listas de residência do Kitanda
+
+A [#11](https://github.com/vguerrax/kafofo/issues/11) usa a migração `0005`, aplicada explicitamente por `pnpm db:migrate`. Ela cria o namespace `kitanda`, listas e compartilhamentos, e acrescenta unicidade composta às concessões residenciais da plataforma para as FKs entre módulos. Não reescreve migrações anteriores.
+
+Selecione núcleo e residência em “Núcleos e residências”. O painel de listas aparece somente para uma residência à qual a conta tem acesso. Responsável/colaborador cria lista privada e edita metadados; o criador com papel de escrita compartilha com pessoas da mesma residência ou revoga compartilhamento. Visualizador somente consulta. Cargos administrativos não tornam listas privadas visíveis.
+
+A tela atualiza as consultas ao retornar ou pelo botão “Atualizar listas”. Revogação impede novas operações imediatamente no backend. A autoria permanece após reingresso, mas o papel atual limita ações; participantes precisam receber novo compartilhamento para a nova concessão residencial. Não há itens, progresso, links públicos, transferência, notificações ou lixeira neste recorte. A integração do histórico da #15 é requisito antes da publicação dessas operações.
+
+Configure `KITANDA_TEST_DATABASE_URL` com banco descartável exclusivo terminado em `_kitanda_test`, diferente dos demais bancos, e execute sequencialmente:
+
+```bash
+pnpm --filter @kafofo/api test:kitanda
+pnpm test:kitanda:e2e
+```
+
+Navegador usa portas exclusivas 4411/5411, duas sessões, celular e teclado. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo ficam desabilitadas. Não executar builds/instalações em paralelo com navegador. Integração testa privacidade, integridade entre residências, papéis, reingresso, revogação e locks. O guia de [CI](ci.md) descreve as regressões da plataforma.
