@@ -3,11 +3,13 @@ import { Value } from 'typebox/value';
 import {
   ListInfoSchema,
   ListCardSchema,
-  ItemInfoSchema,
+  ItemSnapshotSchema,
+  MutationReceiptSchema,
+  ItemReceiptSchema,
+  type ItemSnapshot,
+  type MutationReceipt,
+  type ItemReceipt,
   type ListCard,
-  type ItemInfo,
-  type ItemCreate,
-  type ItemUpdate,
   ShareCandidateSchema,
   ListShareSchema,
   type ListInfo,
@@ -20,6 +22,7 @@ async function request<T>(
   method = 'GET',
   body?: unknown,
   schema?: TSchema,
+  key?: string,
 ): Promise<T> {
   const response = await fetch('/api/kitanda' + path, {
     method,
@@ -27,16 +30,35 @@ async function request<T>(
     cache: 'no-store',
     ...(body === undefined
       ? {}
-      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      : {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(key ? { 'Idempotency-Key': key } : {}),
+          },
+          body: JSON.stringify(body),
+        }),
   });
   if (!response.ok) {
     let message = 'Não foi possível carregar. Tente novamente.';
+    let code: string | undefined;
     try {
-      message = ((await response.json()) as { error: { message: string } }).error.message;
+      const error = ((await response.json()) as { error: { message: string; code?: string } })
+        .error;
+      message = error.message;
+      code = error.code;
     } catch {
       /* transporte */
     }
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, code);
+  }
+  if (response.status === 204 && key) {
+    const receipt = {
+      confirmed: true,
+      resourceId: response.headers.get('X-Resource-Id'),
+      version: Number(response.headers.get('X-Item-Version')),
+    };
+    if (!Value.Check(ItemReceiptSchema, receipt)) throw new Error('Confirmação inválida.');
+    return receipt as T;
   }
   if (!schema) return undefined as T;
   const data: unknown = await response.json();
@@ -51,8 +73,6 @@ export const kitandaApi = {
       undefined,
       Type.Array(ListCardSchema),
     ),
-  create: (res: string, input: { name: string; description: string }) =>
-    request<ListInfo>('/residences/' + res + '/lists', 'POST', input, ListInfoSchema),
   detail: (id: string) => request<ListInfo>('/lists/' + id, 'GET', undefined, ListInfoSchema),
   update: (id: string, input: { name: string; description: string }) =>
     request<ListInfo>('/lists/' + id, 'PATCH', input, ListInfoSchema),
@@ -70,25 +90,39 @@ export const kitandaApi = {
     request<void>('/lists/' + id + '/shares/' + access, 'DELETE'),
 };
 
+export interface PendingCommand {
+  path: string;
+  method: string;
+  payload: unknown;
+  key: string;
+  startedAt: number;
+  item: boolean;
+}
+export function prepareCommand(
+  path: string,
+  method: string,
+  payload: unknown,
+  item = true,
+): PendingCommand {
+  return {
+    path,
+    method,
+    payload: structuredClone(payload),
+    key: crypto.randomUUID(),
+    startedAt: Date.now(),
+    item,
+  };
+}
+export async function sendCommand(command: PendingCommand): Promise<MutationReceipt | ItemReceipt> {
+  return request(
+    command.path,
+    command.method,
+    command.payload,
+    command.item ? ItemReceiptSchema : MutationReceiptSchema,
+    command.key,
+  );
+}
 export const itemApi = {
-  collection: (listId: string) =>
-    request<ItemInfo[]>(
-      '/lists/' + listId + '/items',
-      'GET',
-      undefined,
-      Type.Array(ItemInfoSchema),
-    ),
-  create: (listId: string, input: ItemCreate) =>
-    request<ItemInfo>('/lists/' + listId + '/items', 'POST', input, ItemInfoSchema),
-  update: (listId: string, itemId: string, input: ItemUpdate) =>
-    request<ItemInfo>('/lists/' + listId + '/items/' + itemId, 'PATCH', input, ItemInfoSchema),
-  purchased: (listId: string, itemId: string, purchased: boolean) =>
-    request<ItemInfo>(
-      '/lists/' + listId + '/items/' + itemId + '/purchased',
-      'PUT',
-      { purchased },
-      ItemInfoSchema,
-    ),
-  remove: (listId: string, itemId: string) =>
-    request<void>('/lists/' + listId + '/items/' + itemId, 'DELETE'),
+  snapshot: (id: string) =>
+    request<ItemSnapshot>('/lists/' + id + '/items', 'GET', undefined, ItemSnapshotSchema),
 };

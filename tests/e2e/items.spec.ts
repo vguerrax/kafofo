@@ -51,8 +51,14 @@ test('itens por teclado no celular, decimais e progresso por contagem', async ({
   await expect(card).toContainText('1 de 2 comprados · 50%');
   const row = items.getByRole('region', { name: 'Item Arroz', exact: true });
   await row.getByRole('button', { name: 'Editar Arroz', exact: true }).click();
-  await row.getByLabel('Nome do item', { exact: true }).fill('Arroz integral');
-  await row.getByRole('button', { name: 'Salvar item', exact: true }).click();
+  await items
+    .getByRole('region', { name: 'Edição do item' })
+    .getByLabel('Nome do item', { exact: true })
+    .fill('Arroz integral');
+  await items
+    .getByRole('region', { name: 'Edição do item' })
+    .getByRole('button', { name: 'Salvar item', exact: true })
+    .click();
   await expect(
     items.getByRole('region', { name: 'Item Arroz integral', exact: true }),
   ).toBeVisible();
@@ -80,7 +86,7 @@ test('falha preserva preenchimento e visualizador não tem escrita', async ({
   await expect(items.getByRole('alert')).toContainText('Não foi possível salvar');
   await expect(items.getByLabel('Nome do novo item')).toHaveValue('Preservado');
   await page.unroute('**/api/kitanda/lists/*/items');
-  await items.getByRole('button', { name: 'Adicionar item', exact: true }).click();
+  await items.getByRole('button', { name: 'Tentar confirmar novamente', exact: true }).click();
   await expect(items.getByRole('region', { name: 'Item Preservado', exact: true })).toBeVisible();
   await panel.getByLabel('Pessoa para compartilhar').selectOption({ label: 'kitanda-member' });
   await panel.getByRole('button', { name: 'Compartilhar lista', exact: true }).click();

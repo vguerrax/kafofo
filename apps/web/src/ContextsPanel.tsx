@@ -304,7 +304,14 @@ export function ContextsPanel({
           )}
           {res && (
             <>
-              {res.role && <ListsPanel key={res.id} residenceId={res.id} role={res.role} />}
+              {res.role && (
+                <ListsPanel
+                  key={res.id}
+                  residenceId={res.id}
+                  role={res.role}
+                  onUnauthenticated={onUnauthenticated}
+                />
+              )}
               <p>
                 Seu papel na residência:{' '}
                 <span>{res.role ? roleLabel[res.role] : 'sem acesso ao conteúdo'}</span>
