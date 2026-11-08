@@ -33,5 +33,8 @@ export const recoveryEvents = platformSchema.table(
     channel: text().$type<'admin' | 'operator'>().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
-  (t) => [index('recovery_event_target').on(t.target)],
+  (t) => [
+    index('recovery_event_target').on(t.target),
+    index('recovery_event_expiry').on(t.createdAt),
+  ],
 );
