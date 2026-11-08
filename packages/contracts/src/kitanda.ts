@@ -20,6 +20,7 @@ export const ListInfoSchema = Type.Object(
     updatedAt: Type.String({ format: 'date-time' }),
     canWrite: Type.Boolean(),
     canManageShares: Type.Boolean(),
+    lifecycleRevision: Type.Integer({ minimum: 1 }),
   },
   strict,
 );
@@ -112,3 +113,40 @@ export const ItemSnapshotSchema = Type.Object(
 export type ItemSnapshot = Static<typeof ItemSnapshotSchema>;
 export type MutationReceipt = Static<typeof MutationReceiptSchema>;
 export type ItemReceipt = Static<typeof ItemReceiptSchema>;
+
+export const ClearPurchasedSchema = Type.Object(
+  {
+    targets: Type.Array(
+      Type.Object(
+        {
+          itemId: Type.String({ format: 'uuid' }),
+          expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }),
+        },
+        strict,
+      ),
+      { minItems: 1, maxItems: 500 },
+    ),
+  },
+  strict,
+);
+export const ListLifecycleSchema = Type.Object(
+  {
+    expectedRevision: Type.Integer({ minimum: 1, maximum: 2147483647 }),
+  },
+  strict,
+);
+// O comprovante usa version para a revisão do ciclo; nunca é versão dos metadados.
+export const ListLifecycleReceiptSchema = ItemReceiptSchema;
+export const TrashListSchema = Type.Object(
+  {
+    id: Type.String({ format: 'uuid' }),
+    name: Type.String(),
+    lifecycleRevision: Type.Integer({ minimum: 1 }),
+    deletedAt: Type.String({ format: 'date-time' }),
+    recoverableUntil: Type.String({ format: 'date-time' }),
+    canWrite: Type.Boolean(),
+  },
+  strict,
+);
+export type TrashList = Static<typeof TrashListSchema>;
+export type ClearTarget = Static<typeof ClearPurchasedSchema>['targets'][number];

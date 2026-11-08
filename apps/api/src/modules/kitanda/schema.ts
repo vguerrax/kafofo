@@ -29,10 +29,16 @@ export const lists = kitandaSchema.table(
     description: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    lifecycleRevision: integer().notNull().default(1),
+    deletedAt: timestamp({ withTimezone: true }),
+    deletedBy: text().references(() => user.id),
   },
   (t) => [
     unique('list_residence_identity').on(t.id, t.residenceId),
     index('list_residence').on(t.residenceId),
+    index('list_deleted_expiry')
+      .on(t.deletedAt)
+      .where(sql`${t.deletedAt} is not null`),
   ],
 );
 export const listShares = kitandaSchema.table(
@@ -82,6 +88,9 @@ export const items = kitandaSchema.table(
       .on(t.listId, t.createdAt, t.id)
       .where(sql`${t.deletedAt} is null`),
     check('item_quantity_range', sql`${t.quantity} > 0 and ${t.quantity} <= 999999.999`),
+    index('item_deleted_expiry')
+      .on(t.deletedAt)
+      .where(sql`${t.deletedAt} is not null`),
   ],
 );
 

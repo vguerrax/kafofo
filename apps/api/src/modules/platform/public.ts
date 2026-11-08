@@ -84,3 +84,33 @@ export async function residenceCandidates(
   ).rows;
 }
 export { createTransactions } from './auth/transaction.js';
+
+// Manutenção sem ator: mesma ordem contextual, sem adquirir identidade de usuário.
+// Locks não bloqueantes permitem dividir candidatos entre instâncias.
+export function createResidenceMaintenance(pool: pg.Pool) {
+  const tx = createTransactions(pool);
+  return async function run<T>(
+    residenceId: string,
+    listId: string,
+    operation: (c: pg.PoolClient) => Promise<T>,
+  ) {
+    return tx.run(null, async (c) => {
+      const row = (
+        await c.query<{ coreId: string }>('select "coreId" from platform.residences where id=$1', [
+          residenceId,
+        ])
+      ).rows[0];
+      if (!row) return undefined;
+      for (const key of ['core:' + row.coreId, 'residence:' + residenceId, 'list:' + listId]) {
+        const locked = (
+          await c.query<{ locked: boolean }>(
+            'select pg_try_advisory_xact_lock(hashtext($1)) as locked',
+            [key],
+          )
+        ).rows[0]!.locked;
+        if (!locked) return undefined;
+      }
+      return operation(c);
+    });
+  };
+}

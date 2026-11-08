@@ -10,16 +10,25 @@ import {
   type ListRow,
 } from './access.js';
 import { listFields } from './policies.js';
+import { createLifecycleService } from './lifecycle.js';
 export function createKitandaService(options: PlatformAccessOptions) {
   const { scope, run } = createListAccess(options);
+  const receipts = receiptMaintenance(options),
+    lifecycle = createLifecycleService(options);
   return {
-    ...receiptMaintenance(options),
+    ...receipts,
+    ...lifecycle,
+    async close() {
+      await lifecycle.closePurge();
+      await receipts.close();
+    },
     collection: (headers: Headers, residenceId: string) =>
       scope(headers, residenceId, null, async (c, a) => {
         const rows = (
           await c.query<ListRow & { totalActive: number; totalPurchased: number }>(
             'with visible as (select l.* from kitanda.lists l where l."residenceId"=$1 and ' +
               listVisibility +
+              ' and l."deletedAt" is null' +
               ') select v.*,coalesce(t.total,0)::int as "totalActive",coalesce(t.bought,0)::int as "totalPurchased" from visible v left join (select i."listId",count(*) as total,count(*) filter(where i.purchased) as bought from kitanda.items i join visible x on x.id=i."listId" where i."deletedAt" is null group by i."listId") t on t."listId"=v.id order by v."createdAt",v.id',
             [residenceId, a.userId, a.residenceAccessId],
           )

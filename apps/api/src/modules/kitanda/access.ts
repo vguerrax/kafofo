@@ -14,6 +14,9 @@ export interface ListRow {
   description: string | null;
   createdAt: Date;
   updatedAt: Date;
+  lifecycleRevision: number;
+  deletedAt: Date | null;
+  deletedBy: string | null;
 }
 export const listNotFound = () => new AuthError(404, 'NOT_FOUND', 'Lista não encontrada.');
 export const listForbidden = () =>
@@ -22,9 +25,13 @@ export const listForbidden = () =>
 export const listVisibility =
   '(l."creatorId"=$2 or exists(select 1 from kitanda.list_shares s where s."listId"=l.id and s."residenceAccessId"=$3 and s."revokedAt" is null))';
 export function listInfo(row: ListRow, actor: ResidenceActor) {
-  const { description, ...rest } = row;
+  const { description } = row;
   return {
-    ...rest,
+    id: row.id,
+    residenceId: row.residenceId,
+    creatorId: row.creatorId,
+    name: row.name,
+    lifecycleRevision: row.lifecycleRevision,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     ...(description === null ? {} : { description }),
@@ -38,6 +45,7 @@ export function createListAccess(options: PlatformAccessOptions) {
     listId: string,
     capability: 'read' | 'write' | 'manage',
     operation: (c: pg.PoolClient, actor: ResidenceActor, row: ListRow) => Promise<T>,
+    lifecycle = false,
   ) {
     return scope(
       headers,
@@ -61,6 +69,7 @@ export function createListAccess(options: PlatformAccessOptions) {
           )
         ).rows[0];
         if (!row) throw listNotFound();
+        if (!lifecycle && row.deletedAt !== null) throw listNotFound();
         const caps = listCapabilities(row.creatorId === actor.userId, actor.role);
         if (
           (capability === 'write' && !caps.canWrite) ||
