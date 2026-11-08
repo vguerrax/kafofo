@@ -40,6 +40,86 @@ export function kitandaRoutes(
         { additionalProperties: false },
       );
     const h = (cookie: string | undefined) => new Headers(cookie ? { cookie } : {});
+    app.post(
+      '/lists/:listId/items/clear-purchased',
+      {
+        schema: {
+          operationId: 'clearPurchasedItems',
+          summary: 'Remover logicamente seleção confirmada de comprados',
+          tags,
+          security,
+          params: list,
+          headers: c.IdempotencyHeadersSchema,
+          body: c.ClearPurchasedSchema,
+          response: { 200: c.MutationReceiptSchema, ...errors },
+        },
+      },
+      (req) =>
+        service!.clearPurchased(
+          h(req.headers.cookie),
+          req.params.listId,
+          req.body.targets,
+          req.headers['idempotency-key'],
+        ),
+    );
+    app.delete(
+      '/lists/:listId',
+      {
+        schema: {
+          operationId: 'deleteList',
+          summary: 'Enviar lista confirmada à lixeira',
+          tags,
+          security,
+          params: list,
+          headers: c.IdempotencyHeadersSchema,
+          body: c.ListLifecycleSchema,
+          response: { 200: c.ListLifecycleReceiptSchema, ...errors },
+        },
+      },
+      (req) =>
+        service!.remove(
+          h(req.headers.cookie),
+          req.params.listId,
+          req.body.expectedRevision,
+          req.headers['idempotency-key'],
+        ),
+    );
+    app.get(
+      '/residences/:residenceId/trash',
+      {
+        schema: {
+          operationId: 'listResidenceTrash',
+          summary: 'Consultar lixeira autorizada dentro do prazo de recuperação',
+          tags,
+          security,
+          params: residence,
+          response: { 200: Type.Array(c.TrashListSchema), ...errors },
+        },
+      },
+      (req) => service!.trash(h(req.headers.cookie), req.params.residenceId),
+    );
+    app.post(
+      '/lists/:listId/restore',
+      {
+        schema: {
+          operationId: 'restoreList',
+          summary: 'Restaurar lista com revisão confirmada e prazo vigente',
+          tags,
+          security,
+          params: list,
+          headers: c.IdempotencyHeadersSchema,
+          body: c.ListLifecycleSchema,
+          response: { 200: c.ListLifecycleReceiptSchema, ...errors },
+        },
+      },
+      (req) =>
+        service!.restore(
+          h(req.headers.cookie),
+          req.params.listId,
+          req.body.expectedRevision,
+          req.headers['idempotency-key'],
+        ),
+    );
     app.get(
       '/residences/:residenceId/lists',
       {

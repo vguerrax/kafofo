@@ -190,3 +190,11 @@ jobs:
           AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:collaboration:e2e
+
+      - name: E2E do ciclo de listas em HTTP
+        run: pnpm test:lifecycle:e2e
+      - name: E2E do ciclo de listas em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:lifecycle:e2e

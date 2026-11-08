@@ -5,6 +5,7 @@ export default defineConfig({
       'tests/kitanda.integration.test.ts',
       'tests/items.integration.test.ts',
       'tests/collaboration.integration.test.ts',
+      'tests/lifecycle.integration.test.ts',
     ],
     fileParallelism: false,
     testTimeout: 30000,

@@ -287,3 +287,17 @@ pnpm test:collaboration:e2e
 ```
 
 Usa `KITANDA_TEST_DATABASE_URL`, fixture do Kitanda e portas 4413/5413. Execute sequencialmente com as suítes de listas/itens, sem dados reais e sem builds/instalações simultâneos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local. Capturas de conteúdo permanecem desabilitadas. Os testes incluem duas sessões, cadência/pausa, revisão, foco, resposta perdida após commit, repetição e revogação. `pnpm check` inclui testes do coordenador de consultas. Limpeza de comprados e histórico consultável continuam nas #14/#15.
+
+## Limpeza, lixeira e expurgo
+
+A [#14](https://github.com/vguerrax/kafofo/issues/14) usa a migração `0008`, aplicada por `pnpm db:migrate`, sem reescrever as anteriores. Listas existentes recebem revisão de ciclo 1. Contratos de seleção, revisão, resposta e prazo estão no [domínio](../domain/kitanda/alpha-1.md#contrato-técnico-do-ciclo-de-vida) e no OpenAPI. Clientes devem acompanhar o novo campo obrigatório `lifecycleRevision`.
+
+O expurgo inicia com a API e repete a cada hora. Processa até 50 itens removidos e 50 listas excluídas vencidos por ciclo, em transações independentes. Ignora unidades com lock ocupado e tenta novamente depois; uma falha não descarta o candidato nem impede os demais. O encerramento aguarda a rotina antes de fechar o pool. A fonte de trabalho são os timestamps persistidos; reinício não depende de fila em memória. O prazo usa o relógio do banco, com 720 horas por categoria. Não há expurgo manual pela interface nem restauração individual de item.
+
+`pnpm --filter @kafofo/api test:kitanda` inclui os contratos de ciclo de vida e regressões anteriores em PostgreSQL descartável. Os testes de retenção incluem lote limitado, falha/rollback, duas instâncias, revalidação após lock e retomada. O ponto de integração do histórico usa tabela de contrato exclusiva do teste; o histórico real, sua redação e remoção precisam ser validados com a #15 antes da publicação.
+
+```bash
+pnpm test:lifecycle:e2e
+```
+
+Usa as portas 4414/5414, `KITANDA_TEST_DATABASE_URL` e a fixture comum do Kitanda. Execute sequencialmente com os demais navegadores no mesmo banco descartável. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS; capturas permanecem desabilitadas. Os percursos exercitam duas sessões, seleção alterada, novos comprados, respostas perdidas, lixeira autorizada, visualizador, revogação, teclado e celular. O CI executa os protocolos HTTP e HTTPS junto às regressões da #13. `pnpm check` inclui o agendador inicial/horário, ausência de sobreposição e drenagem no encerramento.

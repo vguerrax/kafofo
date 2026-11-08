@@ -28,6 +28,7 @@
     "test:recovery:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.recovery.config.ts",
     "test:kitanda:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.kitanda.config.ts",
     "test:items:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.items.config.ts",
+    "test:lifecycle:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.lifecycle.config.ts",
     "test:collaboration:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.collaboration.config.ts"
   },
   "devDependencies": {
