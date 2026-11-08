@@ -38,3 +38,45 @@ export const ListShareSchema = Type.Object(
 export type ListInfo = Static<typeof ListInfoSchema>;
 export type ShareCandidate = Static<typeof ShareCandidateSchema>;
 export type ListShare = Static<typeof ListShareSchema>;
+
+export const ListCardSchema = Type.Object(
+  {
+    ...ListInfoSchema.properties,
+    residenceName: Type.String(),
+    totalActive: Type.Integer({ minimum: 0 }),
+    totalPurchased: Type.Integer({ minimum: 0 }),
+  },
+  strict,
+);
+export type ListCard = Static<typeof ListCardSchema>;
+const nullableText = Type.Union([Type.String({ maxLength: 8192 }), Type.Null()]);
+const quantity = Type.Union([Type.String({ maxLength: 1024 }), Type.Null()]);
+const itemFields = {
+  name: Type.String({ maxLength: 8192 }),
+  quantity: Type.Optional(quantity),
+  unit: Type.Optional(nullableText),
+  notes: Type.Optional(nullableText),
+};
+export const ItemCreateSchema = Type.Object(itemFields, strict);
+export const ItemUpdateSchema = Type.Object(
+  { ...itemFields, name: Type.Optional(itemFields.name) },
+  { ...strict, minProperties: 1 },
+);
+export const ItemPurchasedSchema = Type.Object({ purchased: Type.Boolean() }, strict);
+export const ItemInfoSchema = Type.Object(
+  {
+    id: Type.String({ format: 'uuid' }),
+    listId: Type.String({ format: 'uuid' }),
+    name: Type.String(),
+    quantity: Type.Union([Type.String(), Type.Null()]),
+    unit: Type.Union([Type.String(), Type.Null()]),
+    notes: Type.Union([Type.String(), Type.Null()]),
+    purchased: Type.Boolean(),
+    createdAt: Type.String({ format: 'date-time' }),
+    updatedAt: Type.String({ format: 'date-time' }),
+  },
+  strict,
+);
+export type ItemInfo = Static<typeof ItemInfoSchema>;
+export type ItemCreate = Static<typeof ItemCreateSchema>;
+export type ItemUpdate = Static<typeof ItemUpdateSchema>;

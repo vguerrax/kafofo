@@ -179,3 +179,10 @@ select:focus-visible {
 .list-description {
   white-space: pre-wrap;
 }
+
+.list-card {
+  border: 1px solid #c9d3c6;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+}
