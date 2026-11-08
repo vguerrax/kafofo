@@ -79,6 +79,20 @@ Preservar edições em itens diferentes. Recusar atualização desatualizada do 
 
 Revogação bloqueia novas operações no backend imediatamente; conteúdo sai da tela na próxima verificação. O intervalo de cinco segundos não é prazo de tolerância para autorização no servidor.
 
+### Contrato técnico de colaboração online
+
+A [#13](https://github.com/vguerrax/kafofo/issues/13) acrescenta `version` inteira aos itens, inicialmente 1 inclusive para registros existentes. PATCH, PUT de compra e DELETE exigem `expectedVersion`. Mudança efetiva incrementa somente a versão do item afetado; metadados sem alteração e marcação do estado vigente não alteram versão/timestamp. Versão divergente retorna 409 `ITEM_VERSION_CONFLICT`, sem devolver conteúdo do item. A comparação usa uma nova leitura autorizada. Item removido permanece indisponível para sobrescrita.
+
+Criação de lista e mutações de itens exigem `Idempotency-Key` UUID. A identidade do comprovante combina conta, ação, recurso pai e chave; a impressão inclui payload normalizado, item-alvo e versão esperada quando aplicáveis. Efeito e comprovante confirmam na mesma transação, após autorização atual. Chave/payload iguais reconhecem a confirmação sem reaplicar, mesmo se o item mudou ou foi removido; payload diferente retorna 409 `IDEMPOTENCY_KEY_REUSED`. Revogação ou perda de escrita impedem também consultar confirmação por essa via.
+
+Respostas dessas mutações são comprovantes mínimos (`confirmed`, `resourceId` e, para itens, versão confirmada), sem nome, quantidade ou conteúdo anterior. DELETE mantém 204 com `X-Resource-Id` e `X-Item-Version`. A versão confirmada registra o efeito original e não substitui a leitura atual para uma nova edição. GET de itens retorna `{list, items}`, com permissões atuais e versões no mesmo escopo autorizado. Rotas e validações de campos da #12 permanecem.
+
+Comprovantes duram 24 horas; a deduplicação está limitada a essa janela. Limpeza ao iniciar e a cada minuto, sem sobreposição e em lotes de até 500, remove somente expirados. São dados operacionais distintos do histórico/auditoria da #15. Falha antes do commit reverte efeito e comprovante.
+
+Com a lista aberta e visível, o frontend consulta a cada cinco segundos, imediatamente na abertura/retorno e após mutação confirmada. Há no máximo uma consulta ativa por lista; respostas anteriores à confirmação ou de contexto desmontado são descartadas. Rascunho e versão-base ficam em memória, sem serem reescritos pela consulta. A pessoa compara, descarta ou aceita explicitamente a versão atual antes de salvar; não há reenvio automático com versão nova.
+
+Rede/503 sinalizam dados possivelmente desatualizados. Gravação sem confirmação preserva payload/chave e bloqueia alteração do preenchimento até confirmar. Depois de 24 horas, não repete: exige atualizar, conferir o resultado e liberar conscientemente uma nova operação. Perda de leitura/sessão retira conteúdo/rascunhos e interrompe consultas; perda somente de escrita mantém leitura e desabilita mutações. Não há fila offline nem persistência de rascunhos após recarga.
+
 ## Limpeza, exclusão e restauração
 
 Remover item ou limpar comprados aplica exclusão lógica e preserva histórico segundo política da plataforma. Limpar comprados exige confirmação dos alvos apresentados. Mudança de algum alvo entre confirmação/execução exige nova confirmação; novos comprados fora da seleção não são removidos silenciosamente. Limpeza é atômica, sem remoção parcial silenciosa.

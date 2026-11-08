@@ -50,3 +50,5 @@ A #10 acrescenta integração de recuperação e navegador HTTP/HTTPS: `pnpm --f
 A #11 acrescenta `pnpm --filter @kafofo/api test:kitanda` e `pnpm test:kitanda:e2e`, em PostgreSQL exclusivo `kafofo_kitanda_test` configurado por `KITANDA_TEST_DATABASE_URL`. O CI executa integração e percursos HTTP/HTTPS em 4411/5411, além das regressões da plataforma. Capturas de conteúdo e segredos ficam desabilitadas.
 
 A #12 amplia a integração `test:kitanda` com itens e adiciona `pnpm test:items:e2e` em HTTP/HTTPS, nas portas 4412/5412. Usa o mesmo banco descartável exclusivo `KITANDA_TEST_DATABASE_URL`; suítes de navegador executam sequencialmente e reconstroem suas fixtures. `pnpm check` inclui a validação decimal/textual de itens.
+
+A #13 amplia `test:kitanda` com conflitos, comprovantes, rollback, limite de retenção e limpeza em lotes. Acrescenta `pnpm test:collaboration:e2e` em HTTP/HTTPS, nas portas 4413/5413 e no mesmo banco descartável do Kitanda; execução é sequencial com as suítes anteriores. O check de qualidade inclui testes de cadência e descarte de respostas do frontend.
