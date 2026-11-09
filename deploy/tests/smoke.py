@@ -170,6 +170,31 @@ AUTH_SECRET_FILE={directory / 'auth'}
             # An operational revocation after the snapshot must be reapplied before opening.
             restored.sql(f'''update platform.residence_accesses set "revokedAt"=clock_timestamp()
                              where id='{access["id"]}' ''')
+            # Verify login and authorization on the private network before certifying reopening.
+            restored.compose('up', '-d', '--wait', 'api')
+            def private(path, body=None, cookie=None):
+                script = '''let raw=''; for await (const chunk of process.stdin) raw+=chunk;
+                  const input=JSON.parse(raw);
+                  const headers={Origin:process.env.AUTH_BASE_URL,'Content-Type':'application/json'};
+                  if(input.cookie) headers.Cookie=input.cookie;
+                  const response=await fetch('http://127.0.0.1:4304'+input.path,{
+                    method:input.body?'POST':'GET',headers,
+                    ...(input.body?{body:JSON.stringify(input.body)}:{})});
+                  process.stdout.write(JSON.stringify({status:response.status,
+                    body:await response.json(),cookies:response.headers.getSetCookie()}));'''
+                return json.loads(restored.compose('exec', '-T', 'api', 'node', '--input-type=module',
+                    '-e', script, input=json.dumps({'path':path,'body':body,'cookie':cookie}).encode()).stdout)
+            login = private('/api/auth/login', {'username':'viewer','password':password})
+            assert login['status'] == 200
+            cookie = '; '.join(value.split(';')[0] for value in login['cookies'])
+            assert private(f'/api/kitanda/lists/{list_id}', cookie=cookie)['status'] == 404
+            assert private(f'/api/kitanda/lists/{list_id}/history', cookie=cookie)['status'] == 404
+            login = private('/api/auth/login', {'username':'operator','password':password})
+            assert login['status'] == 200
+            cookie = '; '.join(value.split(';')[0] for value in login['cookies'])
+            history = private(f'/api/kitanda/lists/{list_id}/history', cookie=cookie)
+            assert history['status'] == 200 and 'Expired content' not in json.dumps(history['body'])
+            assert 'caddy' not in restored.running()
             record = json.loads(restored.recovery_marker.read_text())
             record.update(revocationsReconciled=True, checksPassed=True,
                           operator='smoke', evidence='disposable-fixture')
