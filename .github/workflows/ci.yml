@@ -41,6 +41,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Lint, formatação, tipos, testes, build e OpenAPI
         run: pnpm check
+      - name: Contratos operacionais de backup e retenção de logs
+        run: pnpm test:deploy
 
   integration:
     name: Integração e navegador

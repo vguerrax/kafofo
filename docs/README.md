@@ -4,7 +4,7 @@
 
 ## Documentação de domínio
 
-Para executar a fundação técnica, consulte o [guia de desenvolvimento local](development/README.md).
+Para executar a fundação técnica, consulte o [guia de desenvolvimento local](development/README.md). Para instalar e recuperar a Alpha 1 em servidor, consulte o [guia operacional](operations/README.md).
 
 | Domínio    | Diretório / índice                     | Conteúdo                                                               |
 | ---------- | -------------------------------------- | ---------------------------------------------------------------------- |
