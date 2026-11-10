@@ -11,6 +11,8 @@ O workflow [CI](../../.github/workflows/ci.yml), implementado na issue #6 confor
 
 Ambos devem passar no commit proposto antes da integração, além da revisão. Qualquer comando que falhe interrompe seu job; não há `continue-on-error`. Timeout e cancelamento de uma execução antiga não equivalem a aprovação. O CI não publica versões nem encerra issues.
 
+A #16 acrescenta `pnpm test:deploy` ao check `Qualidade`, após `pnpm check`. Usa Python 3.11+ e Node para verificar integridade, retenção e falhas de backup, bloqueio de restauração incompleta e rotação/expurgo dos logs. O smoke real de Compose e os builds por arquitetura são verificações separadas, descritas no [guia operacional](../operations/README.md); esse teste unitário não comprova execução de containers.
+
 A exigência automática de checks depende de uma regra de proteção/ruleset de `develop`, configurada pelo mantenedor no GitHub. Este workflow **não altera essa política de acesso**. Na regra, selecione `Qualidade` e `Integração e navegador` depois que aparecerem na primeira execução; não confundir documentação de exigência com bloqueio já ativado. Renomear esses checks requer ajustar a regra. Restrições de plano ou de permissões do repositório devem ser conferidas pelo mantenedor.
 
 ## Forks e permissões

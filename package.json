@@ -30,7 +30,8 @@
     "test:items:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.items.config.ts",
     "test:history:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.history.config.ts",
     "test:lifecycle:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.lifecycle.config.ts",
-    "test:collaboration:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.collaboration.config.ts"
+    "test:collaboration:e2e": "pnpm --filter @kafofo/contracts build && playwright test --config playwright.collaboration.config.ts",
+    "test:deploy": "python3 -m unittest discover -s deploy/tests"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
