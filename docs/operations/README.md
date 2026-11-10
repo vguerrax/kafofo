@@ -6,7 +6,7 @@ Para executar a homologação com três contas fictícias, compra no celular e r
 
 ## Preparação
 
-Servidor Linux com Docker Engine, Compose v2 (com `--wait`), Buildx, Git e Python 3.11+. O build usa Node 24.22.2 e pnpm 11.25.0 dentro do container. Não é necessário instalar Node no servidor. O checkout deve estar limpo, no commit escolhido. Sem publicação de imagens, registry ou CD automático; licença de distribuição continua pendente na ADR-0022.
+Servidor Linux com Docker Engine, Compose v2 (com `--wait`), Buildx, Git e Python 3.11+. O build usa Node 24.22.2 e pnpm 11.25.0 dentro do container. Não é necessário instalar Node no servidor. O checkout deve estar limpo, no commit escolhido. Sem publicação de imagens, registry ou CD automático; a [ADR-0022](../adr/0022-licenca.md) registra a AGPL v3 e as condições para a primeira distribuição pública.
 
 Crie um diretório restrito **fora do checkout**, por exemplo `/srv/kafofo-config`, pertencente ao operador. Copie [deploy/.env.example](../../deploy/.env.example) para `installation.env`. Crie os dois arquivos de segredo com valores aleatórios independentes de ao menos 32 caracteres (por exemplo, `openssl rand -hex 32`), sem imprimir valores em terminais compartilhados. Restrinja o diretório a 0700 e os arquivos a 0600. O processo da API usa UID 1000: os arquivos montados como secrets precisam ser legíveis por esse UID no container. Em Docker rootful com outro UID do operador, ajuste somente a leitura dos dois secrets para UID 1000 por ACL; não os torne legíveis para todos. PostgreSQL lê seu secret como root antes de reduzir privilégios.
 
