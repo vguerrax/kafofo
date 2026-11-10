@@ -1,0 +1,30 @@
+name: Tarefa
+description: Propor trabalho com resultado e critérios verificáveis
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Problema e resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo e limites
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceitação
+      description: Use itens verificáveis. Não copie o Status do Project para este campo.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependências e decisões abertas
+  - type: textarea
+    id: references
+    attributes:
+      label: Requisitos e documentos relacionados

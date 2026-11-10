@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+artifacts/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+docs/domain/
+docs/adr/
+docs/brand/
+docs/reference/

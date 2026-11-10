@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"]
+  },
+  "include": [
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "tests/**/*.ts",
+    "playwright.auth.config.ts",
+    "playwright.contexts.config.ts",
+    "playwright.invitations.config.ts",
+    "playwright.recovery.config.ts",
+    "playwright.kitanda.config.ts",
+    "playwright.items.config.ts",
+    "playwright.collaboration.config.ts",
+    "playwright.lifecycle.config.ts",
+    "playwright.history.config.ts",
+    "playwright.export.config.ts",
+    "playwright.pilot.config.ts"
+  ]
+}

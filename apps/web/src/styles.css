@@ -1,0 +1,214 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #243d32;
+  background: #f5f3eb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 280px;
+}
+
+main {
+  max-width: 760px;
+  padding: clamp(32px, 8vw, 96px) 24px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin: 24px 0 16px;
+  font-size: clamp(3rem, 12vw, 6rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.intro {
+  max-width: 32ch;
+  font-size: 1.5rem;
+  line-height: 1.5;
+}
+
+.connection {
+  margin-top: 48px;
+  padding: 16px 24px;
+  border: 1px solid #c9d3c6;
+  border-radius: 12px;
+  background: #fffef9;
+}
+
+button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: #284d40;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #7e4d20;
+  outline-offset: 4px;
+}
+
+.auth-panel {
+  margin-top: 40px;
+  padding: clamp(20px, 5vw, 32px);
+  border: 1px solid #c9d3c6;
+  border-radius: 16px;
+  background: #fffef9;
+}
+.auth-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+h3 {
+  margin: 0 0 8px;
+}
+form {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+label {
+  font-weight: 600;
+}
+input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #8b9d90;
+  border-radius: 8px;
+  padding: 12px;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+}
+.field-help {
+  margin: 0 0 12px;
+  color: #4c6255;
+  font-size: 0.875rem;
+}
+.error {
+  padding: 12px;
+  border-left: 4px solid #9c352a;
+  color: #7c271e;
+  background: #fff0eb;
+}
+.notice {
+  padding: 12px;
+  background: #e6f0e5;
+}
+.secondary {
+  color: #284d40;
+  background: #e6ede2;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.contexts-panel {
+  margin: 24px 0;
+  padding: 16px 0;
+  border-block: 1px solid #c9d3c6;
+}
+select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  font: inherit;
+  background: white;
+  color: inherit;
+}
+select:focus-visible {
+  outline: 3px solid #7e4d20;
+  outline-offset: 4px;
+}
+.contexts-panel li {
+  overflow-wrap: anywhere;
+  margin-block: 12px;
+}
+.contexts-panel li button {
+  display: block;
+  margin-block: 8px;
+  max-width: 100%;
+}
+.contexts-panel [role='dialog'] {
+  padding: 16px;
+  border: 2px solid #284d40;
+  border-radius: 8px;
+}
+
+.lists-panel {
+  margin-top: 24px;
+  overflow-wrap: anywhere;
+}
+.lists-panel textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 12px;
+  border: 1px solid #8b9d90;
+  border-radius: 8px;
+}
+.lists-panel textarea:focus-visible {
+  outline: 3px solid #7e4d20;
+  outline-offset: 4px;
+}
+.list-description {
+  white-space: pre-wrap;
+}
+
+.list-card {
+  border: 1px solid #c9d3c6;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+}
+
+.lists-panel fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.lists-panel dialog {
+  max-width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border: 2px solid #284d40;
+  border-radius: 12px;
+  color: inherit;
+  background: #fffef9;
+}
+.lists-panel dialog::backdrop {
+  background: #0008;
+}
+.lists-panel dialog button {
+  margin: 8px;
+}
