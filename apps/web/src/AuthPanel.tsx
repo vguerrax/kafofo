@@ -6,6 +6,7 @@ import { ContextsPanel } from './ContextsPanel';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { SessionResponse } from '@kafofo/contracts';
 import { ApiError, changePassword, getSession, login, logout, setupAccount } from './api';
+import { ExportPanel } from './ExportPanel';
 
 export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolean }) {
   const [recovering, setRecovering] = useState(recoveryEntry.opened);
@@ -292,6 +293,15 @@ export function AuthPanel({ initiallyConfigured }: { initiallyConfigured: boolea
           {busy ? 'Aguarde…' : session ? 'Trocar senha' : configured ? 'Entrar' : 'Configurar'}
         </button>
       </form>
+      {session && !inviting && (
+        <ExportPanel
+          key={`export-${session.user.id}`}
+          onUnauthenticated={() => {
+            setSession(null);
+            setMessage('Sua sessão expirou. Entre novamente.');
+          }}
+        />
+      )}
     </section>
   );
 }

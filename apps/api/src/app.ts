@@ -18,8 +18,11 @@ import { healthRoutes } from './modules/platform/health.js';
 import { authRoutes } from './modules/platform/auth/routes.js';
 import type { AuthService } from './modules/platform/auth/service.js';
 import { AuthError } from './modules/platform/auth/policies.js';
+import { individualExportRoutes } from './modules/platform/export/routes.js';
+import type { IndividualExportService } from './modules/platform/export/service.js';
 
 interface AppOptions {
+  individualExport?: IndividualExportService;
   items?: ItemService;
   kitanda?: KitandaService;
   recovery?: RecoveryService;
@@ -43,6 +46,7 @@ export async function buildApp(options: AppOptions = {}) {
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   app.setErrorHandler((error, request, reply) => {
+    reply.removeHeader('Content-Disposition');
     if (error instanceof AuthError) {
       if (error.retryAfter) reply.header('Retry-After', String(error.retryAfter));
       return reply
@@ -103,6 +107,9 @@ export async function buildApp(options: AppOptions = {}) {
   });
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   await app.register(authRoutes(options.auth, options.authOrigin), { prefix: '/api/auth' });
+  await app.register(individualExportRoutes(options.individualExport, options.authOrigin), {
+    prefix: '/api/account',
+  });
   await app.register(contextRoutes(options.contexts, options.authOrigin), {
     prefix: '/api/platform',
   });

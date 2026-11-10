@@ -6,6 +6,7 @@ export default defineConfig({
     include: [
       'apps/api/src/**/*.test.ts',
       'apps/web/src/item-feed.test.ts',
+      'apps/web/src/export-api.test.ts',
       'packages/*/src/**/*.test.ts',
       'pocs/auth/tests/policies.test.ts',
     ],

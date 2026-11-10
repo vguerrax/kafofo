@@ -17,6 +17,7 @@
     "playwright.items.config.ts",
     "playwright.collaboration.config.ts",
     "playwright.lifecycle.config.ts",
-    "playwright.history.config.ts"
+    "playwright.history.config.ts",
+    "playwright.export.config.ts"
   ]
 }
