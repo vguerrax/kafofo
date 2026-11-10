@@ -19,6 +19,10 @@ export interface PlatformAccessOptions {
   baseURL: string;
   now?: () => number;
 }
+export interface ExportResidenceAccess {
+  residenceId: string;
+  accessId: string;
+}
 export function createResidenceScope(options: PlatformAccessOptions) {
   const tx = createTransactions(options.pool),
     now = options.now ?? Date.now;

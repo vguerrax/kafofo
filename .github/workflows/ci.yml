@@ -208,3 +208,11 @@ jobs:
           AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
           AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
         run: pnpm test:history:e2e
+
+      - name: E2E da exportação individual em HTTP
+        run: pnpm test:export:e2e
+      - name: E2E da exportação individual em HTTPS
+        env:
+          AUTH_TLS_CERT: ${{ runner.temp }}/auth-poc-cert.pem
+          AUTH_TLS_KEY: ${{ runner.temp }}/auth-poc-key.pem
+        run: pnpm test:export:e2e

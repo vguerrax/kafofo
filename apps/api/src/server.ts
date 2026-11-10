@@ -8,6 +8,8 @@ import { readConfig } from './config.js';
 import { createDatabase } from './database/client.js';
 import { createLogger } from './logger.js';
 import { createAuthService } from './modules/platform/auth/service.js';
+import { createIndividualExportService } from './modules/platform/export/service.js';
+import { exportOwnActions } from './modules/kitanda/public.js';
 
 const config = readConfig(process.env);
 const logger = createLogger(config.logLevel);
@@ -32,6 +34,15 @@ const app = await buildApp({
         recovery: createRecoveryService({ pool: database.pool, ...config.auth }),
         contexts: createContextService({ pool: database.pool, ...config.auth }),
         invitations: createInvitationService({ pool: database.pool, ...config.auth }),
+        ...(auth
+          ? {
+              individualExport: createIndividualExportService({
+                pool: database.pool,
+                auth,
+                readKitandaActions: exportOwnActions,
+              }),
+            }
+          : {}),
       }
     : {}),
 });

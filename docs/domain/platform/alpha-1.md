@@ -120,6 +120,25 @@ Solicitada somente pelo próprio usuário autenticado, com confirmação da senh
 
 Excluir senhas, hashes, tokens, dados pessoais de terceiros e conteúdo completo das listas compartilhadas. Não recuperar dados expurgados. Verificar autorização atual também na geração/entrega. A autoria de uma ação não permite exportar lista cujo acesso foi revogado. Regras de lixeira e retenção continuam aplicáveis. Este recurso não é exportação do núcleo, cópia completa das listas nem backup da instalação. Implementação acompanhada na [issue #19](https://github.com/vguerrax/kafofo/issues/19).
 
+### Contrato técnico da exportação individual
+
+A #19 disponibiliza **Conta → Exportar meus dados**. Cada download exige a senha atual em `POST /api/account/export`, com sessão válida, origem confiável e corpo contendo somente `password`. Não aceita conta-alvo no corpo ou na query. A verificação usa o adaptador de autenticação existente; os contadores são exclusivos da exportação: até 30 solicitações autenticadas por origem de rede em 60 segundos e bloqueio de 15 minutos após cinco senhas incorretas em 15 minutos por conta. Sucesso limpa somente o contador de falhas de senha da exportação; login não o limpa e falhas de exportação não revogam sessões. Respostas de limite incluem `Retry-After`.
+
+O sucesso entrega todo o JSON com `Content-Type: application/json`, `Content-Disposition: attachment` e `Cache-Control: no-store`. Não grava arquivo no servidor nem cria link público. Senha incorreta, sessão inválida, limite e falha de geração produzem erro sem anexo; a interface informa a falha, apaga a senha submetida e não inicia download.
+
+O formato v1 tem exatamente os campos raiz `schemaVersion: 1`, `generatedAt` em UTC e as quatro seções abaixo. As listas permanecem presentes quando vazias; a projeção é explícita, sem serializar linhas brutas.
+
+| Seção | Campos |
+| --- | --- |
+| `profile` | Objeto com `username`, `name` (nome de exibição) e `createdAt`. A Alpha 1 não persiste preferências próprias adicionais. |
+| `memberships` | Lista de `{ type, id, name, role }`, com `type` igual a `core` ou `residence`. Somente vínculos/acessos ativos, com o papel atual. |
+| `securityEvents` | Lista de `{ type, occurredAt, channel? }`. Somente eventos retidos cujo alvo é a própria conta, inclusive recuperação iniciada por administrador. Recuperação usa tipos `recovery.<ação>` e canal `admin` ou `operator`. Exclui ator, IP, agente de usuário, sessão e detalhes brutos. |
+| `kitandaActions` | Lista de `{ type, occurredAt, listId }` para ações da própria conta em histórico atualmente consultável. Exclui conteúdo de listas/itens, quantidades, valores antigos/novos, participantes e detalhes de compartilhamento. |
+
+Após confirmar a senha, uma transação de leitura `REPEATABLE READ` revalida sessão, vínculos, papéis e concessões. A primeira consulta fixa a fotografia e o instante `generatedAt`: revogações confirmadas antes desse ponto excluem os dados afetados; mudanças posteriores não alteram a fotografia coerente da requisição. Sessão expirada ou revogada nesse ponto impede o arquivo. A autoria não substitui vínculo residencial ativo ou compartilhamento vigente; visualizador pode exportar suas ações quando ainda pode consultar o histórico. Reentrada residencial não reativa concessões recebidas no acesso anterior.
+
+O Kitanda reutiliza os predicados de visibilidade e retenção do histórico. Lista excluída participa apenas enquanto `deletedAt > generatedAt - 720 horas`; igualdade e prazo vencido excluem suas ações, mesmo antes do expurgo físico. Após expurgo de item, somente metadados da ação ainda retida podem aparecer. Segurança exige `createdAt > generatedAt - 2160 horas` nas duas fontes de auditoria, independentemente da limpeza física. Nenhuma consulta recupera dados já expurgados. A geração não cria evento com senha, conteúdo ou referência para download.
+
 ## Backup e operação
 
 Procedimento para execução diária no servidor, mantendo as sete cópias diárias mais recentes. Antes de atualizar, produzir uma cópia adicional e preservá-la até verificar a atualização. Destino configurado pelo operador; cópia fora do disco da instalação recomendada. Não há painel de administração de backup nesta entrega.

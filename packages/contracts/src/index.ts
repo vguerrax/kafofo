@@ -32,3 +32,4 @@ export * from './invitations.js';
 export * from './recovery.js';
 export * from './kitanda.js';
 export * from './history.js';
+export * from './export.js';

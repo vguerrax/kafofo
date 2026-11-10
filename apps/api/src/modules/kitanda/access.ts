@@ -22,8 +22,14 @@ export const listNotFound = () => new AuthError(404, 'NOT_FOUND', 'Lista não en
 export const listForbidden = () =>
   new AuthError(403, 'FORBIDDEN', 'Você não tem permissão para esta ação.');
 // Mesmo predicado para coleção e detalhe; o vínculo ativo vem do escopo da plataforma.
-export const listVisibility =
-  '(l."creatorId"=$2 or exists(select 1 from kitanda.list_shares s where s."listId"=l.id and s."residenceAccessId"=$3 and s."revokedAt" is null))';
+export function listVisibilityFor(user: string, access: string) {
+  // Expressões SQL constantes do módulo; nenhum valor de requisição é interpolado.
+  return `(l."creatorId"=${user} or exists(select 1 from kitanda.list_shares s where s."listId"=l.id and s."residenceAccessId"=${access} and s."revokedAt" is null))`;
+}
+export const listVisibility = listVisibilityFor('$2', '$3');
+export function historyWithinRetention(at: string) {
+  return `(l."deletedAt" is null or l."deletedAt">${at}-interval '720 hours')`;
+}
 export function listInfo(row: ListRow, actor: ResidenceActor) {
   const { description } = row;
   return {
@@ -76,7 +82,8 @@ export function createListAccess(options: PlatformAccessOptions) {
           row.deletedAt !== null &&
           !(
             await c.query(
-              'select 1 from kitanda.lists where id=$1 and "deletedAt">clock_timestamp()-interval \'720 hours\'',
+              'select 1 from kitanda.lists l where l.id=$1 and ' +
+                historyWithinRetention('clock_timestamp()'),
               [listId],
             )
           ).rowCount

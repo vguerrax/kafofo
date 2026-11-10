@@ -168,6 +168,47 @@ export function createAuthService(options: AuthConfig & { pool: pg.Pool; now?: (
       );
     });
   }
+  async function confirmExportPassword(headers: Headers, password: string, source: string) {
+    const active = await getSession(headers);
+    if (!active?.user.username) throw unauthenticated();
+    const originKey = 'export-origin:' + source;
+    await transactions.run('limit:' + originKey, (c) => consumeOrigin(c, originKey, 30, now()));
+    const exportLimit = (error: AuthError) =>
+      new AuthError(
+        429,
+        'EXPORT_BLOCKED',
+        'Muitas tentativas de exportação. Aguarde antes de tentar novamente.',
+        error.retryAfter,
+      );
+    const result = await transactions.run('account:' + active.user.username, async (c) => {
+      const current = await session(c, headers);
+      if (!current?.user.username) throw unauthenticated();
+      const key = 'export-password-account:' + current.user.id;
+      const state = await readLimit(c, key);
+      const suspension = blocked(state, now());
+      if (suspension) return exportLimit(suspension);
+      const verified = await authAdapter(c, options).api.verifyPassword({
+        headers,
+        body: { password },
+        asResponse: true,
+      });
+      if (!verified.ok) {
+        if (verified.status >= 500) throw unavailable();
+        const limit = await fail(c, key, state, now());
+        return limit
+          ? exportLimit(limit)
+          : new AuthError(400, 'INVALID_CURRENT_PASSWORD', 'Senha atual incorreta.');
+      }
+      await c.query('delete from platform.auth_limits where key=$1', [key]);
+      // Referências internas verificadas pelo adaptador; nunca são parte do arquivo.
+      return {
+        userId: current.user.id,
+        sessionId: current.session.id,
+        token: current.session.token,
+      };
+    });
+    return unwrap(result);
+  }
   let timer: ReturnType<typeof setInterval> | undefined;
   let cleaning: Promise<void> | undefined;
   function startCleanup(onError: () => void) {
@@ -194,6 +235,7 @@ export function createAuthService(options: AuthConfig & { pool: pg.Pool; now?: (
     login,
     logout,
     changePassword,
+    confirmExportPassword,
     cleanup,
     startCleanup,
     close,

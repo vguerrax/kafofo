@@ -331,3 +331,16 @@ pnpm test:history:e2e
 ```
 
 Usa portas 4415/5415 e a fixture/banco descartável do Kitanda. Os percursos cobrem detalhes, visualizador, paginação, revogação, lista ativa/lixeira, teclado e celular. Execute sequencialmente com os demais navegadores; sem builds/instalações simultâneos. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS. O CI inclui HTTP/HTTPS. A integração não substitui publicação verificada nem os procedimentos de backup da entrega operacional.
+
+## Exportação individual
+
+A [#19](https://github.com/vguerrax/kafofo/issues/19) acrescenta `POST /api/account/export` e **Conta → Exportar meus dados**, sem migração adicional. O [contrato de domínio](../domain/platform/alpha-1.md#contrato-técnico-da-exportação-individual) descreve JSON v1, confirmação de senha por download, limites independentes do login, privacidade, retenção e ponto de corte da leitura consistente. O OpenAPI publica o corpo, o arquivo e os cabeçalhos de sucesso.
+
+```bash
+pnpm --filter @kafofo/api test:kitanda
+pnpm test:export:e2e
+```
+
+A integração inclui exportação com duas contas, recuperação iniciada por administrador, ausência de segredos/conteúdo/ações de terceiros, sessões e limites, perda de permissão antes/depois do ponto de corte, lixeira e metadados residuais após expurgo. Usa exclusivamente `KITANDA_TEST_DATABASE_URL`, em PostgreSQL descartável com nome terminado em `_test`; execute sequencialmente com as demais suítes que limpam esse banco.
+
+O navegador usa portas 4419/5419 e a fixture comum do Kitanda. Verifica confirmação a cada arquivo, JSON baixado, senha incorreta, limite, falha de geração, sessão revogada, teclado e celular. `AUTH_TLS_CERT`/`AUTH_TLS_KEY` habilitam HTTPS local; o CI executa ambos os protocolos. Traces, vídeos, screenshots e snapshots DOM de falha permanecem desabilitados. O teste remove o download após conferi-lo em memória. `pnpm check` inclui os testes de validação do arquivo no cliente e de falha de serialização sem anexo. A homologação do ambiente piloto mantém o mesmo contrato de privacidade e revogação na #17.
