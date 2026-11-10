@@ -2,6 +2,8 @@
 
 Procedimentos da [issue #16](https://github.com/vguerrax/kafofo/issues/16), conforme o [contrato de operação](../domain/platform/alpha-1.md#backup-e-operação) e as ADRs [0016](../adr/0016-deploy-compose-multiarch.md), [0017](../adr/0017-proxy-caddy.md), [0018](../adr/0018-logs-pino.md) e [0021](../adr/0021-entrega-implantacao-continua.md). As evidências efetivamente executadas ficam na issue/PR. A [#17](https://github.com/vguerrax/kafofo/issues/17) verifica a instalação piloto integrada, sua versão e commit distribuído.
 
+Para executar a homologação com três contas fictícias, compra no celular e recuperação do piloto, use o [roteiro de piloto privado](pilot.md). Ele identifica o candidato efetivamente instalado e preserva a matriz executada na #17.
+
 ## Preparação
 
 Servidor Linux com Docker Engine, Compose v2 (com `--wait`), Buildx, Git e Python 3.11+. O build usa Node 24.22.2 e pnpm 11.25.0 dentro do container. Não é necessário instalar Node no servidor. O checkout deve estar limpo, no commit escolhido. Sem publicação de imagens, registry ou CD automático; licença de distribuição continua pendente na ADR-0022.
