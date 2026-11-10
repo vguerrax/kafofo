@@ -39,7 +39,7 @@ A base utilizada foi o contexto do projeto e a recuperação das definições an
 | 0019 | [Web responsiva, PWA e evolução por integrações](0019-web-pwa-integracoes.md) | Aceita |
 | 0020 | [Bibliotecas complementares do frontend](0020-bibliotecas-frontend.md) | Pendente |
 | 0021 | [Entrega e implantação contínuas](0021-entrega-implantacao-continua.md) | Pendente |
-| 0022 | [Licença de distribuição](0022-licenca.md) | Pendente |
+| 0022 | [Licença de distribuição](0022-licenca.md) | Escolha aprovada, validação de distribuição pendente |
 | 0023 | [Histórico de domínio e retenção por categoria na Alpha 1](0023-auditoria-retencao-alpha-1.md) | Aceita para a Alpha 1 |
 
 ## Pontos que precisam de acompanhamento

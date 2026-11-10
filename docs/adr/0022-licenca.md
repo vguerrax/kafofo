@@ -20,7 +20,7 @@ Licenças permissivas, como Apache 2.0, permitem distribuir versões com altera�
 ## Antes da primeira distribuição pública
 
 - Inventariar dependências diretas e transitivas, imagens base e componentes incorporados aos artefatos distribuídos. Conferir compatibilidade e identificar textos e avisos de terceiros que devem acompanhar a distribuição.
-- Após a verificação, adicionar o texto oficial da AGPL v3 em `LICENSE` e documentar como acessar o código-fonte correspondente à versão distribuída.
-- Manter a release pública da Alpha 1 condicionada à conclusão dessas verificações. O piloto privado já homologado está registrado nas issues #1 e #17.
+- O texto da AGPL v3 está em [LICENSE](../../LICENSE). A [preparação da distribuição](../operations/distribution.md) registra a revisão preliminar, os avisos coletados e como oferecer o código-fonte correspondente.
+- A Alpha 1 encerra como piloto privado, registrado nas issues #1 e #17. A primeira release pública fica para depois da Alpha 2, após validar a navegação da #41 e verificar a distribuição do candidato efetivo.
 
 Referência: [texto oficial da GNU AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html).
