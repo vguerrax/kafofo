@@ -1,30 +1,26 @@
 # ADR-0022: Licença de distribuição
 
-- **Status:** Pendente
+- **Status:** Escolha aprovada, validação de distribuição pendente
 - **Data de registro:** 2026-11-03
+- **Data da decisão:** 2026-11-10
 - **Projeto:** Kafofo
 
 ## Contexto
 
-O projeto pretende ser open-source e auto-hospedado, mas não foi recuperada uma licença aprovada.
+O Kafofo é um projeto de código aberto e auto-hospedado. O mantenedor quer que usuários de versões modificadas oferecidas pela rede tenham acesso ao código-fonte correspondente.
 
 ## Decisão
 
-A licença permanece em aberto. Não atribuir MIT, AGPL ou qualquer outra licença ao Kafofo com base apenas na intenção de abrir o código.
+Adotar a GNU Affero General Public License versão 3 para o código do Kafofo. A licença permite uso comercial, incluindo hospedagem paga, e exige que operadores de versões modificadas ofereçam o código-fonte correspondente aos usuários que interagem com a versão pela rede, conforme a seção 13.
 
-## Consequências e riscos
+## Alternativas consideradas
 
-Sem decisão explícita, não é possível afirmar condições de uso e redistribuição. A escolha precisa ser coerente com os objetivos do projeto e suas dependências.
+Licenças permissivas, como Apache 2.0, permitem distribuir versões com alterações fechadas. A MPL 2.0 aplica copyleft por arquivo quando há distribuição. A GPL v3 aplica copyleft na distribuição. A AGPL v3 foi escolhida pela obrigação aplicável às versões modificadas usadas pela rede.
 
-## Alternativas de referência
+## Antes da primeira distribuição pública
 
-Licença permissiva; licença copyleft. Nenhuma alternativa está aprovada neste registro.
+- Inventariar dependências diretas e transitivas, imagens base e componentes incorporados aos artefatos distribuídos. Conferir compatibilidade e identificar textos e avisos de terceiros que devem acompanhar a distribuição.
+- Após a verificação, adicionar o texto oficial da AGPL v3 em `LICENSE` e documentar como acessar o código-fonte correspondente à versão distribuída.
+- Manter a release pública da Alpha 1 condicionada à conclusão dessas verificações. O piloto privado já homologado está registrado nas issues #1 e #17.
 
-## Validação e pontos em aberto
-
-Definir os objetivos de distribuição e contribuição e verificar compatibilidade das dependências antes de criar o arquivo LICENSE. Esta ADR registra a pendência, sem oferecer uma conclusão jurídica.
-
-## Origem e limites do registro
-
-Consolidação das definições do projeto recuperadas para este conjunto. A data acima é a data de documentação, não necessariamente a de aprovação. Justificativas, alternativas e orientações derivadas explicitam a análise desta consolidação e não afirmam que todas foram discutidas ou aprovadas anteriormente. Consulte o [índice](README.md) para os critérios de status.
-
+Referência: [texto oficial da GNU AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html).
