@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/.env*
+.git
+.agents
+.codex
+.aws
+artifacts
+test-results
+playwright-report
+coverage
+deploy/state
+**/__pycache__
+**/*.pem
+**/*.key
+**/*.dump
+**/*.tar

@@ -1,0 +1,24 @@
+name: Defeito
+description: Relatar comportamento incorreto reproduzível
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Como reproduzir
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado e observado
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão ou commit e ambiente
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidências
+      description: Remova senhas, tokens e dados pessoais antes de anexar logs.

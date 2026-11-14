@@ -1,0 +1,41 @@
+{
+  "name": "@kafofo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file-if-exists=.env dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/database/migrate.ts",
+    "test:db": "node --env-file-if-exists=.env --import tsx src/database/verify.ts",
+    "openapi:generate": "node --import tsx src/openapi.ts",
+    "test:auth": "pnpm --filter @kafofo/contracts build && node --env-file-if-exists=.env ../../node_modules/vitest/vitest.mjs run --config vitest.auth.config.ts",
+    "auth:bootstrap": "node --env-file-if-exists=.env --import tsx src/modules/platform/auth/operator.ts",
+    "test:contexts": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.contexts.config.ts",
+    "test:invitations": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.invitations.config.ts",
+    "test:recovery": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.recovery.config.ts",
+    "auth:recover": "node --env-file-if-exists=.env --import tsx src/modules/platform/recovery/operator.ts",
+    "test:kitanda": "pnpm --filter @kafofo/contracts build && node ../../node_modules/vitest/vitest.mjs run --config vitest.kitanda.config.ts"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.18",
+    "@fastify/swagger": "9.9.3",
+    "@fastify/type-provider-typebox": "6.3.0",
+    "@kafofo/contracts": "workspace:*",
+    "ajv-formats": "^3.0.1",
+    "better-auth": "1.7.18",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.8",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "typebox": "1.4.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15"
+  }
+}

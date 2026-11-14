@@ -1,0 +1,36 @@
+{
+  "name": "@kafofo/auth-poc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "node --env-file-if-exists=.env ../../node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts",
+    "test:e2e": "node --env-file-if-exists=.env ../../node_modules/@playwright/test/cli.js test --config playwright.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/database/migrate.ts",
+    "serve": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "client": "vite --host 127.0.0.1 --port 5505 --strictPort",
+    "operator": "node --env-file-if-exists=.env --import tsx src/operator.ts"
+  },
+  "dependencies": {
+    "better-auth": "1.7.18",
+    "@better-auth/drizzle-adapter": "1.7.18",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.8",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "vite": "8.3.6"
+  }
+}

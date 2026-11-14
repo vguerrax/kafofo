@@ -1,0 +1,32 @@
+{
+	admin off
+	log default {
+		exclude http.log.error http.log.access
+		output file /logs/caddy/runtime.log {
+			roll_disabled
+		}
+		format json
+	}
+}
+
+{$SITE_ADDRESS} {
+	{$TLS_DIRECTIVE}
+	encode zstd gzip
+	header Referrer-Policy no-referrer
+	header X-Content-Type-Options nosniff
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy api:4304 {
+			# Overwrite all client-supplied proxy identity. Only this hop is trusted.
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up -Forwarded
+		}
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

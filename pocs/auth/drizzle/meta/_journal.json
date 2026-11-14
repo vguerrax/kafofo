@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794008092312,
+      "tag": "0000_auth-poc",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794008169888,
+      "tag": "0001_timezone-explicit",
+      "breakpoints": true
+    }
+  ]
+}
